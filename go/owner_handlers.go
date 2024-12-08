@@ -210,9 +210,7 @@ func ownerGetChairs(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ownerGetChairsCacheMutex.Lock()
-	ownerGetChairsCacheMutex.RLock()
 	cachedResp, found = ownerGetChairsCache.Get(owner.ID)
-	ownerGetChairsCacheMutex.RUnlock()
 	if found {
 		writeJSON(w, http.StatusOK, cachedResp)
 		return
