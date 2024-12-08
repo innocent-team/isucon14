@@ -97,7 +97,7 @@ func internalGetMatching(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 50%の確率でキューの最初から取り出す
-	if rand.Intn(100) < 50 {
+	if rand.Intn(100) < 0 {
 		w.WriteHeader(http.StatusNoContent)
 		return
 	}
