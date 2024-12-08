@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 
+	"github.com/doug-martin/goqu/v9"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -53,23 +54,13 @@ func getLatestRideStatusesByRideIds(ctx context.Context, q sqlx.QueryerContext, 
 		return nil, nil
 	}
 
-	// Powered by GitHub Copilot
-	rawQuery := `
-	SELECT rs.*
-	FROM ride_statuses rs
-	INNER JOIN (
-		SELECT ride_id, MAX(created_at) AS max_created_at
-		FROM ride_statuses
-		WHERE ride_id IN (?)
-		GROUP BY ride_id
-	) latest
-	ON rs.ride_id = latest.ride_id AND rs.created_at = latest.max_created_at;
-	`
-	query, args, err := sqlx.In(rawQuery, rideIDs)
+	query, args, err := goquDialect.From("latest_ride_statuses").
+		Where(goqu.Ex{"ride_id": rideIDs}).
+		ToSQL()
 	if err != nil {
 		return nil, err
 	}
-	var rideStatusRows []*RideStatus
+	var rideStatusRows []*LatestRideStatus
 	if err := sqlx.SelectContext(ctx, q, &rideStatusRows, query, args...); err != nil {
 		return nil, err
 	}
@@ -77,7 +68,11 @@ func getLatestRideStatusesByRideIds(ctx context.Context, q sqlx.QueryerContext, 
 	rideStatuses := make(map[string]*RideStatus)
 	for _, rideStatus := range rideStatusRows {
 		if _, ok := rideStatuses[rideStatus.RideID]; !ok {
-			rideStatuses[rideStatus.RideID] = rideStatus
+			rideStatuses[rideStatus.RideID] = &RideStatus{
+				RideID:    rideStatus.RideID,
+				Status:    rideStatus.Status,
+				CreatedAt: rideStatus.CreatedAt,
+			}
 		}
 	}
 	return rideStatuses, nil
