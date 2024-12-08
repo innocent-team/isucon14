@@ -121,3 +121,10 @@ func NewLatestChairStatus(chairId, status string) *LatestChairStatus {
 		CreatedAt: time.Now(),
 	}
 }
+
+type LatestChairLocation struct {
+	ChairID   string    `db:"chair_id"`
+	Latitude  int       `db:"latitude"`
+	Longitude int       `db:"longitude"`
+	CreatedAt time.Time `db:"created_at"`
+}

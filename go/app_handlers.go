@@ -958,7 +958,8 @@ func appGetNearbyChairs(w http.ResponseWriter, r *http.Request) {
 	err = tx.SelectContext(
 		ctx,
 		&chairs,
-		`SELECT * FROM chairs`,
+		// 過去にライドが存在し、かつ、それが完了していない場合はスキップ
+		`SELECT * FROM chairs WHERE id NOT IN (SELECT chair_id FROM latest_chair_statuses WHERE status != 'COMPLETED')`,
 	)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
@@ -968,7 +969,7 @@ func appGetNearbyChairs(w http.ResponseWriter, r *http.Request) {
 	for i, chair := range chairs {
 		chairIDs[i] = chair.ID
 	}
-	latestChairStatusById, err := getLatestChairStatusesByChairIDs(ctx, tx, chairIDs)
+	latestChairLocationByChairId, err := getLatestChairLocationsByChairIds(ctx, tx, chairIDs)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
@@ -980,30 +981,10 @@ func appGetNearbyChairs(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 
-		// 過去にライドが存在し、かつ、それが完了していない場合はスキップ
-		latestStatus, ok := latestChairStatusById[chair.ID]
-		if ok && latestStatus.Status != "COMPLETED" {
-			continue
-		}
-
 		// 最新の位置情報を取得
-		type LocationType struct {
-			Latitude  int `json:"latitude"`
-			Longitude int `json:"longitude"`
-		}
-		chairLocation := &LocationType{}
-		err = tx.GetContext(
-			ctx,
-			chairLocation,
-			`SELECT latitude, longitude FROM latest_chair_locations WHERE chair_id = ?`,
-			chair.ID,
-		)
-		if err != nil {
-			if errors.Is(err, sql.ErrNoRows) {
-				continue
-			}
-			writeError(w, http.StatusInternalServerError, err)
-			return
+		chairLocation, ok := latestChairLocationByChairId[chair.ID]
+		if !ok {
+			continue
 		}
 
 		if calculateDistance(coordinate.Latitude, coordinate.Longitude, chairLocation.Latitude, chairLocation.Longitude) <= distance {
@@ -1019,20 +1000,9 @@ func appGetNearbyChairs(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	retrievedAt := &time.Time{}
-	err = tx.GetContext(
-		ctx,
-		retrievedAt,
-		`SELECT CURRENT_TIMESTAMP(6)`,
-	)
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, err)
-		return
-	}
-
 	writeJSON(w, http.StatusOK, &appGetNearbyChairsResponse{
 		Chairs:      nearbyChairs,
-		RetrievedAt: retrievedAt.UnixMilli(),
+		RetrievedAt: time.Now().UnixMilli(),
 	})
 }
 
