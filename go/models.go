@@ -107,3 +107,17 @@ type Coupon struct {
 	CreatedAt time.Time `db:"created_at"`
 	UsedBy    *string   `db:"used_by"`
 }
+
+type LatestChairStatus struct {
+	ChairID   string    `db:"chair_id"`
+	Status    string    `db:"status"`
+	CreatedAt time.Time `db:"created_at"`
+}
+
+func NewLatestChairStatus(chairId, status string) *LatestChairStatus {
+	return &LatestChairStatus{
+		ChairID:   chairId,
+		Status:    status,
+		CreatedAt: time.Now(),
+	}
+}
