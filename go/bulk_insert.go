@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"database/sql"
+	"fmt"
 
 	"github.com/doug-martin/goqu/v9"
 	"github.com/jmoiron/sqlx"
@@ -25,7 +26,7 @@ func initializeLatestRideStatuses(ctx context.Context, db *sqlx.DB) error {
 	`
 	var rideStatusRows []*RideStatus
 	if err := db.SelectContext(ctx, &rideStatusRows, query); err != nil {
-		return err
+		return fmt.Errorf("SELECT latest ride_statuses: %v", err)
 	}
 
 	// ride_statuses.chair_id を埋める
@@ -33,7 +34,7 @@ func initializeLatestRideStatuses(ctx context.Context, db *sqlx.DB) error {
 	if err := goquDialect.DB(db).
 		From("rides").
 		ScanStructsContext(ctx, &rides); err != nil {
-		return err
+		return fmt.Errorf("SELECT ride_statuses: %v", err)
 	}
 	chairIdByRideId := make(map[string]sql.NullString)
 	for _, ride := range rides {
@@ -49,7 +50,7 @@ func initializeLatestRideStatuses(ctx context.Context, db *sqlx.DB) error {
 			Where(goqu.Ex{"ride_id": rideID}).
 			Executor().ExecContext(ctx)
 		if err != nil {
-			return err
+			return fmt.Errorf("UPDATE ride_statuses: %v", err)
 		}
 	}
 
@@ -68,7 +69,7 @@ func initializeLatestRideStatuses(ctx context.Context, db *sqlx.DB) error {
 		})).
 		Executor().ExecContext(ctx)
 	if err != nil {
-		return err
+		return fmt.Errorf("INSERT latest_ride_statuses: %v", err)
 	}
 
 	initialLatestChairStatuses := make([]*LatestChairStatus, 0, len(rideStatusRows))
@@ -92,7 +93,7 @@ func initializeLatestRideStatuses(ctx context.Context, db *sqlx.DB) error {
 			})).
 			Executor().ExecContext(ctx)
 		if err != nil {
-			return err
+			return fmt.Errorf("INSERT latest_chair_statuses: %v", err)
 		}
 	}
 
