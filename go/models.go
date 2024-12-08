@@ -61,24 +61,41 @@ type Ride struct {
 }
 
 type LatestRideStatus struct {
-	RideID    string    `db:"ride_id"`
-	Status    string    `db:"status"`
-	CreatedAt time.Time `db:"created_at"`
+	ChairID   sql.NullString `db:"chair_id"`
+	RideID    string         `db:"ride_id"`
+	Status    string         `db:"status"`
+	CreatedAt time.Time      `db:"created_at"`
 }
 
-func NewLatestRideStatus(rideId, status string) *LatestRideStatus {
+func NewLatestRideStatus(chairId sql.NullString, rideId, status string) *LatestRideStatus {
 	return &LatestRideStatus{
+		ChairID:   chairId,
 		RideID:    rideId,
 		Status:    status,
 		CreatedAt: time.Now(),
 	}
 }
 
-func (r *RideStatus) ToLatestRideStatus() *LatestRideStatus {
+func (r *RideStatus) ToLatestRideStatus(chairId sql.NullString) *LatestRideStatus {
 	return &LatestRideStatus{
+		ChairID:   chairId,
 		RideID:    r.RideID,
 		Status:    r.Status,
 		CreatedAt: r.CreatedAt,
+	}
+}
+
+type LatestChairStatus struct {
+	ChairID   string    `db:"chair_id"`
+	Status    string    `db:"status"`
+	CreatedAt time.Time `db:"created_at"`
+}
+
+func NewLatestChairStatus(chairId, status string) *LatestChairStatus {
+	return &LatestChairStatus{
+		ChairID:   chairId,
+		Status:    status,
+		CreatedAt: time.Now(),
 	}
 }
 

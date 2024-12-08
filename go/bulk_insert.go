@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"database/sql"
 
 	"github.com/doug-martin/goqu/v9"
 	"github.com/jmoiron/sqlx"
@@ -27,21 +28,72 @@ func initializeLatestRideStatuses(ctx context.Context, db *sqlx.DB) error {
 		return err
 	}
 
+	// ride_statuses.chair_id を埋める
+	var rides []*Ride
+	if err := goquDialect.DB(db).
+		From("rides").
+		ScanStructsContext(ctx, &rides); err != nil {
+		return err
+	}
+	chairIdByRideId := make(map[string]sql.NullString)
+	for _, ride := range rides {
+		chairIdByRideId[ride.ID] = ride.ChairID
+	}
+	for rideID, chairID := range chairIdByRideId {
+		if !chairID.Valid {
+			continue
+		}
+		_, err := goquDialect.DB(db).
+			Update("ride_statuses").
+			Set(goqu.Record{"chair_id": chairID.String}).
+			Where(goqu.Ex{"ride_id": rideID}).
+			Executor().ExecContext(ctx)
+		if err != nil {
+			return err
+		}
+	}
+
 	initialLatestRideStatuses := make([]*LatestRideStatus, 0, len(rideStatusRows))
 	for _, rideStatus := range rideStatusRows {
-		initialLatestRideStatuses = append(initialLatestRideStatuses, rideStatus.ToLatestRideStatus())
+		initialLatestRideStatuses = append(initialLatestRideStatuses, rideStatus.ToLatestRideStatus(chairIdByRideId[rideStatus.RideID]))
 	}
 
 	_, err := goquDialect.DB(db).
 		Insert("latest_ride_statuses").
 		Rows(initialLatestRideStatuses).As("new").
 		OnConflict(goqu.DoUpdate("", goqu.Record{
+			"chair_id":   goqu.L("new.chair_id"),
 			"status":     goqu.L("new.status"),
 			"created_at": goqu.L("new.created_at"),
 		})).
 		Executor().ExecContext(ctx)
 	if err != nil {
 		return err
+	}
+
+	initialLatestChairStatuses := make([]*LatestChairStatus, 0, len(rideStatusRows))
+	for _, rideStatus := range initialLatestRideStatuses {
+		if rideStatus.ChairID.Valid {
+			initialLatestChairStatuses = append(initialLatestChairStatuses, &LatestChairStatus{
+				ChairID:   rideStatus.ChairID.String,
+				Status:    rideStatus.Status,
+				CreatedAt: rideStatus.CreatedAt,
+			})
+		}
+	}
+
+	if len(initialLatestChairStatuses) > 0 {
+		_, err = goquDialect.DB(db).
+			Insert("latest_chair_statuses").
+			Rows(initialLatestChairStatuses).As("new").
+			OnConflict(goqu.DoUpdate("", goqu.Record{
+				"status":     goqu.L("new.status"),
+				"created_at": goqu.L("new.created_at"),
+			})).
+			Executor().ExecContext(ctx)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -51,6 +103,31 @@ func updateLatestRideStatus(ctx context.Context, e sqlx.ExtContext, rideStatus *
 	query, args, err := goquDialect.
 		Insert("latest_ride_statuses").
 		Rows(rideStatus).As("new").
+		OnConflict(goqu.DoUpdate("", goqu.Record{
+			"chair_id":   goqu.L("new.chair_id"),
+			"status":     goqu.L("new.status"),
+			"created_at": goqu.L("new.created_at"),
+		})).
+		ToSQL()
+	if err != nil {
+		return err
+	}
+
+	if _, err := e.ExecContext(ctx, query, args...); err != nil {
+		return err
+	}
+
+	if !rideStatus.ChairID.Valid {
+		return nil
+	}
+	chairStatus := &LatestChairStatus{
+		Status:    rideStatus.Status,
+		CreatedAt: rideStatus.CreatedAt,
+		ChairID:   rideStatus.ChairID.String,
+	}
+	query, args, err = goquDialect.
+		Insert("latest_chair_statuses").
+		Rows(chairStatus).As("new").
 		OnConflict(goqu.DoUpdate("", goqu.Record{
 			"status":     goqu.L("new.status"),
 			"created_at": goqu.L("new.created_at"),
