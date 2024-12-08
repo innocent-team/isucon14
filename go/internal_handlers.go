@@ -1,10 +1,56 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"net/http"
+
+	"github.com/jmoiron/sqlx"
 )
+
+type RideType struct {
+	ID              string `db:"id"`
+	PickupLatitude  int    `db:"pickup_latitude"`
+	PickupLongitude int    `db:"pickup_longitude"`
+}
+
+type ChairType struct {
+	ID string `db:"id"`
+}
+
+func searchNearestbyAvaiableChair(ctx context.Context, db *sqlx.DB, latitude int, longitude int) (*ChairType, bool, error) {
+	// PickupLatitude, PickupLongitude を使って、使える近くの椅子を探す
+	chairs := &[]ChairType{}
+	if err := db.SelectContext(ctx, chairs, `
+	SELECT id FROM chairs
+		LEFT JOIN latest_chair_locations cl ON cl.chair_id = chairs.id
+		WHERE chairs.is_active = TRUE ORDER BY (ABS(cl.latitude - ?) + ABS(cl.longitude - ?))
+		LIMIT 10`,
+		latitude, longitude); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, false, nil
+		}
+		return nil, false, err
+	}
+	for _, chair := range *chairs {
+		empty := false
+		if err := db.GetContext(ctx, &empty,
+			`SELECT COUNT(*) = 0 FROM
+				(SELECT COUNT(chair_sent_at) = 6 AS completed
+					FROM ride_statuses
+					WHERE ride_id IN (SELECT id FROM rides WHERE chair_id = ?)
+					GROUP BY ride_id) is_completed
+					WHERE completed = FALSE`,
+			chair.ID); err != nil {
+			return nil, false, err
+		}
+		if empty {
+			return &chair, false, nil
+		}
+	}
+	return nil, true, nil
+}
 
 // GET /api/internal/matching
 //
@@ -12,8 +58,9 @@ import (
 func internalGetMatching(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	// MEMO: 一旦最も待たせているリクエストに適当な空いている椅子マッチさせる実装とする。おそらくもっといい方法があるはず…
-	ride := &Ride{}
-	if err := db.GetContext(ctx, ride, `SELECT * FROM rides WHERE chair_id IS NULL ORDER BY created_at LIMIT 1`); err != nil {
+	// PickupLatitude, PickupLongitude を使って、使える近くの椅子を探す
+	ride := &RideType{}
+	if err := db.GetContext(ctx, ride, `SELECT id FROM rides WHERE chair_id IS NULL ORDER BY created_at LIMIT 1`); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			w.WriteHeader(http.StatusNoContent)
 			return
@@ -22,26 +69,12 @@ func internalGetMatching(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	matched := &Chair{}
-	empty := false
-	for i := 0; i < 10; i++ {
-		if err := db.GetContext(ctx, matched, "SELECT * FROM chairs INNER JOIN (SELECT id FROM chairs WHERE is_active = TRUE ORDER BY RAND() LIMIT 1) AS tmp ON chairs.id = tmp.id LIMIT 1"); err != nil {
-			if errors.Is(err, sql.ErrNoRows) {
-				w.WriteHeader(http.StatusNoContent)
-				return
-			}
-			writeError(w, http.StatusInternalServerError, err)
-		}
-
-		if err := db.GetContext(ctx, &empty, "SELECT COUNT(*) = 0 FROM (SELECT COUNT(chair_sent_at) = 6 AS completed FROM ride_statuses WHERE ride_id IN (SELECT id FROM rides WHERE chair_id = ?) GROUP BY ride_id) is_completed WHERE completed = FALSE", matched.ID); err != nil {
-			writeError(w, http.StatusInternalServerError, err)
-			return
-		}
-		if empty {
-			break
-		}
+	matched, missing, err := searchNearestbyAvaiableChair(ctx, db, ride.PickupLatitude, ride.PickupLongitude)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
 	}
-	if !empty {
+	if missing {
 		w.WriteHeader(http.StatusNoContent)
 		return
 	}
