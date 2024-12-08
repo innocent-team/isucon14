@@ -236,10 +236,11 @@ FROM chairs
                                 chair_locations.created_at,
                                 ABS(latitude - LAG(latitude) OVER (PARTITION BY chair_id ORDER BY created_at)) +
                                 ABS(longitude - LAG(longitude) OVER (PARTITION BY chair_id ORDER BY created_at)) AS distance
+FROM chair_locations
     INNER JOIN chairs
     ON chair_locations.chair_id = chairs.id
     WHERE owner_id = ?
-                         FROM chair_locations) tmp
+                         ) tmp
                    GROUP BY chair_id) distance_table ON distance_table.chair_id = chairs.id
 WHERE owner_id = ?
 `, owner.ID, owner.ID); err != nil {
