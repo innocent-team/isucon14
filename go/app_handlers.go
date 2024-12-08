@@ -1036,22 +1036,19 @@ func calculateFare(pickupLatitude, pickupLongitude, destLatitude, destLongitude 
 func calculateDiscountedFare(ctx context.Context, tx *sqlx.Tx, userID string, ride *Ride, pickupLatitude, pickupLongitude, destLatitude, destLongitude int) (int, error) {
 	var coupon Coupon
 	discount := 0
-	if ride != nil {
-		destLatitude = ride.DestinationLatitude
-		destLongitude = ride.DestinationLongitude
-		pickupLatitude = ride.PickupLatitude
-		pickupLongitude = ride.PickupLongitude
 
-		// すでにクーポンが紐づいているならそれの割引額を参照
-		if err := tx.GetContext(ctx, &coupon, "SELECT * FROM coupons WHERE used_by = ?", ride.ID); err != nil {
-			if !errors.Is(err, sql.ErrNoRows) {
-				return 0, err
-			}
-		} else {
-			discount = coupon.Discount
+	destLatitude = ride.DestinationLatitude
+	destLongitude = ride.DestinationLongitude
+	pickupLatitude = ride.PickupLatitude
+	pickupLongitude = ride.PickupLongitude
+
+	// すでにクーポンが紐づいているならそれの割引額を参照
+	if err := tx.GetContext(ctx, &coupon, "SELECT * FROM coupons WHERE used_by = ?", ride.ID); err != nil {
+		if !errors.Is(err, sql.ErrNoRows) {
+			return 0, err
 		}
 	} else {
-		return calculateDiscountedFareWithFirstTimeCouponHighPriority(ctx, tx, userID, pickupLatitude, pickupLongitude, destLatitude, destLongitude)
+		discount = coupon.Discount
 	}
 
 	meteredFare := farePerDistance * calculateDistance(pickupLatitude, pickupLongitude, destLatitude, destLongitude)
