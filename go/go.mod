@@ -5,6 +5,7 @@ go 1.23
 require (
 	cloud.google.com/go/profiler v0.4.1
 	github.com/GoogleCloudPlatform/opentelemetry-operations-go/exporter/trace v1.25.0
+	github.com/catatsuy/cache v0.2.1
 	github.com/go-chi/chi/v5 v5.1.0
 	github.com/go-sql-driver/mysql v1.8.1
 	github.com/jmoiron/sqlx v1.4.0

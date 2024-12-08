@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/catatsuy/cache"
 	"github.com/oklog/ulid/v2"
 )
 
@@ -190,10 +191,18 @@ type ownerGetChairResponseChair struct {
 	TotalDistanceUpdatedAt *int64 `json:"total_distance_updated_at,omitempty"`
 }
 
+var ownerGetChairsCache = cache.NewReadHeavyCacheExpired[string, ownerGetChairResponse]()
+
 // GET /api/owner/chairs
 func ownerGetChairs(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	owner := ctx.Value("owner").(*Owner)
+
+	cachedResp, found := ownerGetChairsCache.Get(owner.ID)
+	if found {
+		writeJSON(w, http.StatusOK, cachedResp)
+		return
+	}
 
 	chairs := []chairWithDetail{}
 	if err := db.SelectContext(ctx, &chairs, `SELECT id,
@@ -238,5 +247,9 @@ WHERE owner_id = ?
 		}
 		res.Chairs = append(res.Chairs, c)
 	}
+
+	// 3秒キャッシュする
+	// ref: https://gist.github.com/wtks/0a3268de13856ed6e18c6560023ec436#%E7%8C%B6%E4%BA%88%E6%99%82%E9%96%93
+	ownerGetChairsCache.Set(owner.ID, res, 3*time.Second)
 	writeJSON(w, http.StatusOK, res)
 }
