@@ -64,7 +64,7 @@ fi
 sudo install -o root -g root -m 644 ./conf/mysql/mysql.conf.d/mysqld.cnf /etc/mysql/mysql.conf.d/mysqld.cnf
 sudo install -o root -g root -m 644 ./conf/systemd/system/mysql-digest.service /etc/systemd/system/mysql-digest.service
 
-if [[ "$INSTANCE_NUM" == 3 || "$INSTANCE_NUM" == 1 ]]; then
+if [[ "$INSTANCE_NUM" == 3 ]]; then
   sudo systemctl daemon-reload
 
   echo "MySQL restart したいなら手動で sudo systemctl restart mysql やってね"
