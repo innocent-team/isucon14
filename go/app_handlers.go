@@ -965,6 +965,15 @@ func appGetNearbyChairs(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
+	chairIDs := make([]string, len(chairs))
+	for i, chair := range chairs {
+		chairIDs[i] = chair.ID
+	}
+	latestChairLocationByChairId, err := getLatestChairLocationsByChairIds(ctx, tx, chairIDs)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
 
 	nearbyChairs := []appGetNearbyChairsResponseChair{}
 	for _, chair := range chairs {
@@ -973,23 +982,9 @@ func appGetNearbyChairs(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// 最新の位置情報を取得
-		type LocationType struct {
-			Latitude  int `json:"latitude"`
-			Longitude int `json:"longitude"`
-		}
-		chairLocation := &LocationType{}
-		err = tx.GetContext(
-			ctx,
-			chairLocation,
-			`SELECT latitude, longitude FROM latest_chair_locations WHERE chair_id = ?`,
-			chair.ID,
-		)
-		if err != nil {
-			if errors.Is(err, sql.ErrNoRows) {
-				continue
-			}
-			writeError(w, http.StatusInternalServerError, err)
-			return
+		chairLocation, ok := latestChairLocationByChairId[chair.ID]
+		if !ok {
+			continue
 		}
 
 		if calculateDistance(coordinate.Latitude, coordinate.Longitude, chairLocation.Latitude, chairLocation.Longitude) <= distance {

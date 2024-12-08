@@ -156,3 +156,26 @@ func getLatestChairStatusesByChairIDs(ctx context.Context, q sqlx.QueryerContext
 	}
 	return chairStatuses, nil
 }
+
+func getLatestChairLocationsByChairIds(ctx context.Context, q sqlx.QueryerContext, chairIDs []string) (map[string]*LatestChairLocation, error) {
+	if len(chairIDs) == 0 {
+		return nil, nil
+	}
+
+	query, args, err := goquDialect.From("latest_chair_locations").
+		Where(goqu.Ex{"chair_id": chairIDs}).
+		ToSQL()
+	if err != nil {
+		return nil, err
+	}
+	var chairLocationRows []*LatestChairLocation
+	if err := sqlx.SelectContext(ctx, q, &chairLocationRows, query, args...); err != nil {
+		return nil, err
+	}
+
+	chairLocations := make(map[string]*LatestChairLocation)
+	for _, chairLocation := range chairLocationRows {
+		chairLocations[chairLocation.ChairID] = chairLocation
+	}
+	return chairLocations, nil
+}
