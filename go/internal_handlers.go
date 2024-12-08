@@ -95,6 +95,8 @@ func internalGetMatching(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	/* 最後から取得する
+
 	ride = &RideType{}
 	if err := db.GetContext(ctx, ride, `SELECT id FROM rides WHERE chair_id IS NULL ORDER BY created_at DESC LIMIT 1`); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -114,6 +116,8 @@ func internalGetMatching(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNoContent)
 		return
 	}
+
+	*/
 
 	w.WriteHeader(http.StatusNoContent)
 }
