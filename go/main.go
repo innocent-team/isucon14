@@ -39,50 +39,55 @@ func main() {
 func setup() http.Handler {
 	ctx := context.Background()
 
-	cfg := profiler.Config{
-		Service: serverName,
-		// HHmmss-MMDD
-		// XXX: quota突破したのでバージョンを固定する
-		ServiceVersion: "101300-1208",
-		// ProjectID must be set if not running on GCP.
-		ProjectID: os.Getenv("GOOGLE_CLOUD_PROJECT"),
+	// ENABLE_TRACING=1 のときだけトレーシング系を有効にする
+	enableTracing := os.Getenv("ENABLE_TRACING") == "1"
 
-		// For OpenCensus users:
-		// To see Profiler agent spans in APM backend,
-		// set EnableOCTelemetry to true
-		// EnableOCTelemetry: true,
-	}
+	if enableTracing {
+		cfg := profiler.Config{
+			Service: serverName,
+			// HHmmss-MMDD
+			// XXX: quota突破したのでバージョンを固定する
+			ServiceVersion: "101300-1208",
+			// ProjectID must be set if not running on GCP.
+			ProjectID: os.Getenv("GOOGLE_CLOUD_PROJECT"),
 
-	// Profiler initialization, best done as early as possible.
-	if err := profiler.Start(cfg); err != nil {
-		log.Fatal(err)
-	}
+			// For OpenCensus users:
+			// To see Profiler agent spans in APM backend,
+			// set EnableOCTelemetry to true
+			// EnableOCTelemetry: true,
+		}
 
-	exporter, err := otlptracegrpc.New(ctx)
-	if err != nil {
-		log.Fatalf("texporter.NewExporter: %v", err)
-	}
-	res, err := resource.New(
-		ctx,
-		resource.WithAttributes(
-			// sevice.name attributeを指定する
-			// これを指定しないとサービスが unknown_service:app になって気まずい
-			semconv.ServiceNameKey.String(serverName),
-		),
-	)
-	if err != nil {
-		log.Fatalf("resource.New: %v", err)
-	}
-	tp := sdktrace.NewTracerProvider(
-		sdktrace.WithBatcher(exporter),
-		sdktrace.WithResource(res),
-	)
-	defer tp.ForceFlush(ctx) // flushes any pending spans
-	otel.SetTracerProvider(tp)
-	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}, propagation.Baggage{}))
+		// Profiler initialization, best done as early as possible.
+		if err := profiler.Start(cfg); err != nil {
+			log.Fatal(err)
+		}
 
-	if err := registerOtelsqlDriver(); err != nil {
-		log.Fatalf("Failed to register otelsql driver: %v", err)
+		exporter, err := otlptracegrpc.New(ctx)
+		if err != nil {
+			log.Fatalf("texporter.NewExporter: %v", err)
+		}
+		res, err := resource.New(
+			ctx,
+			resource.WithAttributes(
+				// sevice.name attributeを指定する
+				// これを指定しないとサービスが unknown_service:app になって気まずい
+				semconv.ServiceNameKey.String(serverName),
+			),
+		)
+		if err != nil {
+			log.Fatalf("resource.New: %v", err)
+		}
+		tp := sdktrace.NewTracerProvider(
+			sdktrace.WithBatcher(exporter),
+			sdktrace.WithResource(res),
+		)
+		defer tp.ForceFlush(ctx) // flushes any pending spans
+		otel.SetTracerProvider(tp)
+		otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}, propagation.Baggage{}))
+
+		if err := registerOtelsqlDriver(); err != nil {
+			log.Fatalf("Failed to register otelsql driver: %v", err)
+		}
 	}
 
 	host := os.Getenv("ISUCON_DB_HOST")
@@ -127,13 +132,15 @@ func setup() http.Handler {
 	mux := chi.NewRouter()
 	mux.Use(middleware.Logger)
 	mux.Use(middleware.Recoverer)
-	baseCfg := otelchimetric.NewBaseConfig(serverName)
-	mux.Use(
-		otelchi.Middleware(serverName, otelchi.WithChiRoutes(mux)),
-		otelchimetric.NewRequestDurationMillis(baseCfg),
-		otelchimetric.NewRequestInFlight(baseCfg),
-		otelchimetric.NewResponseSizeBytes(baseCfg),
-	)
+	if enableTracing {
+		baseCfg := otelchimetric.NewBaseConfig(serverName)
+		mux.Use(
+			otelchi.Middleware(serverName, otelchi.WithChiRoutes(mux)),
+			otelchimetric.NewRequestDurationMillis(baseCfg),
+			otelchimetric.NewRequestInFlight(baseCfg),
+			otelchimetric.NewResponseSizeBytes(baseCfg),
+		)
+	}
 	mux.HandleFunc("POST /api/initialize", postInitialize)
 
 	// app handlers
