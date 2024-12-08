@@ -188,6 +188,7 @@ type getAppRidesResponseItemChair struct {
 	Model string `json:"model"`
 }
 
+// GET /api/app/rides
 func appGetRides(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	user := ctx.Value("user").(*User)
@@ -206,6 +207,26 @@ func appGetRides(w http.ResponseWriter, r *http.Request) {
 		`SELECT * FROM rides WHERE user_id = ? ORDER BY created_at DESC`,
 		user.ID,
 	); err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+	rideChairIDs := make([]string, 0, len(rides))
+	for _, ride := range rides {
+		if ride.ChairID.Valid {
+			rideChairIDs = append(rideChairIDs, ride.ChairID.String)
+		}
+	}
+	chairById, err := getChairsByIds(ctx, tx, rideChairIDs)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+	chairOwnerIDs := make([]string, 0, len(chairById))
+	for _, chair := range chairById {
+		chairOwnerIDs = append(chairOwnerIDs, chair.OwnerID)
+	}
+	ownerById, err := getOwnersByIds(ctx, tx, chairOwnerIDs)
+	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
@@ -239,18 +260,18 @@ func appGetRides(w http.ResponseWriter, r *http.Request) {
 
 		item.Chair = getAppRidesResponseItemChair{}
 
-		chair := &Chair{}
-		if err := tx.GetContext(ctx, chair, `SELECT * FROM chairs WHERE id = ?`, ride.ChairID); err != nil {
-			writeError(w, http.StatusInternalServerError, err)
+		chair, ok := chairById[ride.ChairID.String]
+		if !ok {
+			writeError(w, http.StatusInternalServerError, errors.New("chair not found"))
 			return
 		}
 		item.Chair.ID = chair.ID
 		item.Chair.Name = chair.Name
 		item.Chair.Model = chair.Model
 
-		owner := &Owner{}
-		if err := tx.GetContext(ctx, owner, `SELECT * FROM owners WHERE id = ?`, chair.OwnerID); err != nil {
-			writeError(w, http.StatusInternalServerError, err)
+		owner, ok := ownerById[chair.OwnerID]
+		if !ok {
+			writeError(w, http.StatusInternalServerError, errors.New("owner not found"))
 			return
 		}
 		item.Chair.Owner = owner.Name
