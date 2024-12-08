@@ -133,6 +133,16 @@ CREATE TABLE latest_ride_statuses
 )
   COMMENT = 'ライドの最新ステータステーブル。ride_statusesをもとに構築される';
 
+DROP TABLE IF EXISTS latest_chair_statuses;
+CREATE TABLE latest_chair_statuses
+(
+  chair_id VARCHAR(26) NOT NULL COMMENT '椅子ID',
+  status ENUM ('MATCHING', 'ENROUTE', 'PICKUP', 'CARRYING', 'ARRIVED', 'COMPLETED') NOT NULL COMMENT '状態',
+  created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '状態変更日時',
+  PRIMARY KEY (chair_id)
+)
+  COMMENT = '椅子の最新ステータステーブル。ride_statusesをもとに構築される';
+
 DROP TABLE IF EXISTS owners;
 CREATE TABLE owners
 (

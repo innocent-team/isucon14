@@ -82,6 +82,20 @@ func (r *RideStatus) ToLatestRideStatus() *LatestRideStatus {
 	}
 }
 
+type LatestChairStatus struct {
+	ChairID   string    `db:"chair_id"`
+	Status    string    `db:"status"`
+	CreatedAt time.Time `db:"created_at"`
+}
+
+func NewLatestChairStatus(chairId, status string) *LatestChairStatus {
+	return &LatestChairStatus{
+		ChairID:   chairId,
+		Status:    status,
+		CreatedAt: time.Now(),
+	}
+}
+
 type RideStatus struct {
 	ID          string     `db:"id"`
 	RideID      string     `db:"ride_id"`
