@@ -66,6 +66,14 @@ type LatestRideStatus struct {
 	CreatedAt time.Time `db:"created_at"`
 }
 
+func NewLatestRideStatus(rideId, status string) *LatestRideStatus {
+	return &LatestRideStatus{
+		RideID:    rideId,
+		Status:    status,
+		CreatedAt: time.Now(),
+	}
+}
+
 func (r *RideStatus) ToLatestRideStatus() *LatestRideStatus {
 	return &LatestRideStatus{
 		RideID:    r.RideID,
