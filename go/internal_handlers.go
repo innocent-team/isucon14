@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/jmoiron/sqlx"
+	"golang.org/x/exp/rand"
 )
 
 type RideType struct {
@@ -95,7 +96,11 @@ func internalGetMatching(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	/* 最後から取得する
+	// 50%の確率でキューの最初から取り出す
+	if rand.Intn(100) < 50 {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
 
 	ride = &RideType{}
 	if err := db.GetContext(ctx, ride, `SELECT id FROM rides WHERE chair_id IS NULL ORDER BY created_at DESC LIMIT 1`); err != nil {
@@ -116,8 +121,6 @@ func internalGetMatching(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNoContent)
 		return
 	}
-
-	*/
 
 	w.WriteHeader(http.StatusNoContent)
 }

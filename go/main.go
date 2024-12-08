@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/exec"
 	"strconv"
+	"time"
 
 	"cloud.google.com/go/profiler"
 	"github.com/go-chi/chi/v5"
@@ -26,6 +27,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
+	"golang.org/x/exp/rand"
 )
 
 var db *sqlx.DB
@@ -37,6 +39,8 @@ func main() {
 }
 
 func setup() http.Handler {
+	rand.Seed(time.Now().UnixNano())
+
 	ctx := context.Background()
 
 	cfg := profiler.Config{
