@@ -44,8 +44,3 @@ func (q *MatchingPubSubQueue) Start(ctx context.Context) {
 		}
 	}
 }
-
-func (q *MatchingPubSubQueue) Clear() {
-	close(q.queue)
-	*q = *NewMatchingPubSubQueue()
-}
