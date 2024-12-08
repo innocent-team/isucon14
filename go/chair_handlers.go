@@ -219,7 +219,7 @@ type chairGetNotificationResponseData struct {
 	Status                string     `json:"status"`
 }
 
-const chairGetNotificationRetryAfterMs = 3000
+const chairGetNotificationRetryAfterMs = 1000
 
 // GET /api/chair/notification
 func chairGetNotification(w http.ResponseWriter, r *http.Request) {
