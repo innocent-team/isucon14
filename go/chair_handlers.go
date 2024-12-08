@@ -185,6 +185,9 @@ type chairGetNotificationResponseData struct {
 	Status                string     `json:"status"`
 }
 
+const chairGetNotificationRetryAfterMs = 3000
+
+// GET /api/chair/notification
 func chairGetNotification(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	chair := ctx.Value("chair").(*Chair)
@@ -202,7 +205,7 @@ func chairGetNotification(w http.ResponseWriter, r *http.Request) {
 	if err := tx.GetContext(ctx, ride, `SELECT * FROM rides WHERE chair_id = ? ORDER BY updated_at DESC LIMIT 1`, chair.ID); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			writeJSON(w, http.StatusOK, &chairGetNotificationResponse{
-				RetryAfterMs: 30,
+				RetryAfterMs: chairGetNotificationRetryAfterMs,
 			})
 			return
 		}
@@ -262,7 +265,7 @@ func chairGetNotification(w http.ResponseWriter, r *http.Request) {
 			},
 			Status: status,
 		},
-		RetryAfterMs: 30,
+		RetryAfterMs: chairGetNotificationRetryAfterMs,
 	})
 }
 
