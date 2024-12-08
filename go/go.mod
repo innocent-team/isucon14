@@ -18,6 +18,8 @@ require (
 	go.opentelemetry.io/otel/sdk v1.32.0
 )
 
+require github.com/goccy/go-json v0.10.3
+
 require (
 	cloud.google.com/go v0.116.0 // indirect
 	cloud.google.com/go/auth v0.9.9 // indirect
@@ -43,7 +45,6 @@ require (
 	go.opentelemetry.io/otel/trace v1.32.0 // indirect
 	go.opentelemetry.io/proto/otlp v1.3.1 // indirect
 	golang.org/x/crypto v0.28.0 // indirect
-	golang.org/x/exp v0.0.0-20241204233417-43b7b7cde48d
 	golang.org/x/net v0.30.0 // indirect
 	golang.org/x/oauth2 v0.23.0 // indirect
 	golang.org/x/sync v0.10.0 // indirect

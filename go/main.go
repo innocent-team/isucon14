@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	crand "crypto/rand"
-	"encoding/json"
 	"fmt"
 	"log"
 	"log/slog"
@@ -12,6 +11,8 @@ import (
 	"os"
 	"os/exec"
 	"strconv"
+
+	"github.com/goccy/go-json"
 
 	"cloud.google.com/go/profiler"
 	"github.com/go-chi/chi/v5"
