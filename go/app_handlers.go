@@ -946,6 +946,7 @@ NOT EXISTS (
     ) latest_status ON r.id = latest_status.ride_id
     WHERE r.chair_id = c.id
     AND latest_status.status != 'COMPLETED'
+)
 	`, lat, lon, distance)
 
 	if err != nil {
