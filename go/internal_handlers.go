@@ -4,10 +4,10 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"math/rand"
 	"net/http"
 
 	"github.com/jmoiron/sqlx"
-	"golang.org/x/exp/rand"
 )
 
 type RideType struct {
