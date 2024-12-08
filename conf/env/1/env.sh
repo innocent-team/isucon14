@@ -9,3 +9,5 @@ ISUCON_MATCHING_INTERVAL=0.5
 
 GOOGLE_APPLICATION_CREDENTIALS=/home/isucon/service-account-credentials.json
 GOOGLE_CLOUD_PROJECT=triple-innocent
+
+OTEL_EXPORTER_OTLP_TRACES_ENDPOINT="http://localhost:4317"
