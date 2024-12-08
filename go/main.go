@@ -14,7 +14,6 @@ import (
 	"strconv"
 
 	"cloud.google.com/go/profiler"
-	texporter "github.com/GoogleCloudPlatform/opentelemetry-operations-go/exporter/trace"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-sql-driver/mysql"
@@ -22,6 +21,7 @@ import (
 	"github.com/riandyrn/otelchi"
 	otelchimetric "github.com/riandyrn/otelchi/metric"
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
@@ -57,7 +57,7 @@ func setup() http.Handler {
 		log.Fatal(err)
 	}
 
-	exporter, err := texporter.New()
+	exporter, err := otlptracegrpc.New(ctx)
 	if err != nil {
 		log.Fatalf("texporter.NewExporter: %v", err)
 	}
