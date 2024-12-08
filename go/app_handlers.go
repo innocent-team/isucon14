@@ -760,6 +760,33 @@ func appGetNotification(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, response)
 }
 
+func getRideStatusesByRideIds(ctx context.Context, tx *sqlx.Tx, rideIDs []string) (map[string][]RideStatus, error) {
+	if len(rideIDs) == 0 {
+		return nil, nil
+	}
+
+	query, args, err := sqlx.In(`SELECT * FROM ride_statuses WHERE ride_id IN (?) ORDER BY created_at`, rideIDs)
+	if err != nil {
+		return nil, err
+	}
+
+	rideStatuses := map[string][]RideStatus{}
+
+	rideStatusesSlice := []RideStatus{}
+	if err := tx.SelectContext(ctx, &rideStatusesSlice, query, args...); err != nil {
+		return rideStatuses, err
+	}
+
+	for _, status := range rideStatusesSlice {
+		if _, ok := rideStatuses[status.RideID]; !ok {
+			rideStatuses[status.RideID] = []RideStatus{}
+		}
+		rideStatuses[status.RideID] = append(rideStatuses[status.RideID], status)
+	}
+
+	return rideStatuses, nil
+}
+
 func getChairStats(ctx context.Context, tx *sqlx.Tx, chairID string) (appGetNotificationResponseChairStats, error) {
 	stats := appGetNotificationResponseChairStats{}
 
@@ -774,19 +801,20 @@ func getChairStats(ctx context.Context, tx *sqlx.Tx, chairID string) (appGetNoti
 		return stats, err
 	}
 
+	// ride_idのスライスを作成
+	rideIDs := make([]string, len(rides))
+	for i, ride := range rides {
+		rideIDs[i] = ride.ID
+	}
+	rideStatusesByRideID, err := getRideStatusesByRideIds(ctx, tx, rideIDs)
+	if err != nil {
+		return stats, err
+	}
+
 	totalRideCount := 0
 	totalEvaluation := 0.0
 	for _, ride := range rides {
-		rideStatuses := []RideStatus{}
-		err = tx.SelectContext(
-			ctx,
-			&rideStatuses,
-			`SELECT * FROM ride_statuses WHERE ride_id = ? ORDER BY created_at`,
-			ride.ID,
-		)
-		if err != nil {
-			return stats, err
-		}
+		rideStatuses := rideStatusesByRideID[ride.ID]
 
 		var arrivedAt, pickupedAt *time.Time
 		var isCompleted bool
