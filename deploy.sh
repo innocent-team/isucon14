@@ -28,7 +28,7 @@ install -o isucon -g isucon -m 755 ./conf/env/${INSTANCE_NUM}/env.sh /home/isuco
 sudo install -o root -g root -m 644 ./conf/nginx/conf.d/isuride.conf /etc/nginx/conf.d/isuride.conf
 sudo install -o root -g root -m 644 ./conf/nginx/nginx.conf /etc/nginx/nginx.conf
 
-if [[ "$INSTANCE_NUM" == 1 || "$INSTANCE_NUM" == 2 ]]; then
+if [[ "$INSTANCE_NUM" == 2 ]]; then
   sudo nginx -t
 
   sudo systemctl restart nginx
@@ -46,7 +46,7 @@ sudo systemctl enable --now otelcol-contrib.service
 # APP
 sudo install -o root -g root -m 644 ./conf/systemd/system/isuride-go.service /etc/systemd/system/isuride-go.service
 
-if [[ "$INSTANCE_NUM" == 1 ||  "$INSTANCE_NUM" == 2 ]]; then
+if [[ "$INSTANCE_NUM" == 1 ]]; then
   sudo systemctl daemon-reload
 
   pushd go
