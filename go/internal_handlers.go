@@ -6,6 +6,8 @@ import (
 	"net/http"
 )
 
+// GET /api/internal/matching
+//
 // このAPIをインスタンス内から一定間隔で叩かせることで、椅子とライドをマッチングさせる
 func internalGetMatching(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
