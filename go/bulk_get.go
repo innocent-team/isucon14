@@ -47,3 +47,38 @@ func getOwnersByIds(ctx context.Context, q sqlx.QueryerContext, ownerIDs []strin
 	}
 	return owners, nil
 }
+
+func getLatestRideStatusesByRideIds(ctx context.Context, q sqlx.QueryerContext, rideIDs []string) (map[string]*RideStatus, error) {
+	if len(rideIDs) == 0 {
+		return nil, nil
+	}
+
+	// Powered by GitHub Copilot
+	rawQuery := `
+	SELECT rs.*
+	FROM ride_statuses rs
+	INNER JOIN (
+		SELECT ride_id, MAX(created_at) AS max_created_at
+		FROM ride_statuses
+		WHERE ride_id IN (?)
+		GROUP BY ride_id
+	) latest
+	ON rs.ride_id = latest.ride_id AND rs.created_at = latest.max_created_at;
+	`
+	query, args, err := sqlx.In(rawQuery, rideIDs)
+	if err != nil {
+		return nil, err
+	}
+	var rideStatusRows []*RideStatus
+	if err := sqlx.SelectContext(ctx, q, &rideStatusRows, query, args...);err != nil {
+		return nil, err
+	}
+
+	rideStatuses := make(map[string]*RideStatus)
+	for _, rideStatus := range rideStatusRows {
+		if _, ok := rideStatuses[rideStatus.RideID]; !ok {
+			rideStatuses[rideStatus.RideID] = rideStatus
+		}
+	}
+	return rideStatuses, nil
+}

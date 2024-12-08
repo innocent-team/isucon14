@@ -230,15 +230,24 @@ func appGetRides(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
+	rideIDs := make([]string, 0, len(rides))
+	for _, ride := range rides {
+		rideIDs = append(rideIDs, ride.ID)
+	}
+	rideStatusByRideID, err := getLatestRideStatusesByRideIds(ctx, tx, rideIDs)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
 
 	items := []getAppRidesResponseItem{}
 	for _, ride := range rides {
-		status, err := getLatestRideStatus(ctx, tx, ride.ID)
-		if err != nil {
-			writeError(w, http.StatusInternalServerError, err)
+		status, ok := rideStatusByRideID[ride.ID]
+		if !ok {
+			writeError(w, http.StatusInternalServerError, errors.New("ride status not found"))
 			return
 		}
-		if status != "COMPLETED" {
+		if status.Status != "COMPLETED" {
 			continue
 		}
 
