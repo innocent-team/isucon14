@@ -44,7 +44,7 @@ key_buffer_size		= 16M
 myisam-recover-options  = BACKUP
 
 max_connections        = 1024
-innodb_buffer_pool_size = 3.4G
+innodb_buffer_pool_size = 3400M
 innodb_flush_log_at_trx_commit = 0
 innodb_flush_method=O_DIRECT
 
