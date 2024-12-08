@@ -6,11 +6,13 @@ require (
 	cloud.google.com/go/profiler v0.4.1
 	github.com/GoogleCloudPlatform/opentelemetry-operations-go/exporter/trace v1.25.0
 	github.com/catatsuy/cache v0.2.1
+	github.com/doug-martin/goqu/v9 v9.19.0
 	github.com/go-chi/chi/v5 v5.1.0
 	github.com/go-sql-driver/mysql v1.8.1
 	github.com/jmoiron/sqlx v1.4.0
 	github.com/oklog/ulid/v2 v2.1.0
 	github.com/riandyrn/otelchi v0.11.0
+	github.com/utgwkk/go-ext v0.0.0-20241207091935-e338c6d27c1a
 	go.nhat.io/otelsql v0.14.0
 	go.opentelemetry.io/otel v1.32.0
 	go.opentelemetry.io/otel/sdk v1.32.0

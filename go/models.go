@@ -60,6 +60,20 @@ type Ride struct {
 	UpdatedAt            time.Time      `db:"updated_at"`
 }
 
+type LatestRideStatus struct {
+	RideID    string    `db:"ride_id"`
+	Status    string    `db:"status"`
+	CreatedAt time.Time `db:"created_at"`
+}
+
+func (r *RideStatus) ToLatestRideStatus() *LatestRideStatus {
+	return &LatestRideStatus{
+		RideID:    r.RideID,
+		Status:    r.Status,
+		CreatedAt: r.CreatedAt,
+	}
+}
+
 type RideStatus struct {
 	ID          string     `db:"id"`
 	RideID      string     `db:"ride_id"`

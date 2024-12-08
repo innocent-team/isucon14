@@ -113,6 +113,16 @@ CREATE TABLE ride_statuses
 )
   COMMENT = 'ライドステータスの変更履歴テーブル';
 
+DROP TABLE IF EXISTS latest_ride_statuses;
+CREATE TABLE latest_ride_statuses
+(
+  ride_id VARCHAR(26)                                                                        NOT NULL COMMENT 'ライドID',
+  status          ENUM ('MATCHING', 'ENROUTE', 'PICKUP', 'CARRYING', 'ARRIVED', 'COMPLETED') NOT NULL COMMENT '状態',
+  created_at      DATETIME(6)                                                                NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '状態変更日時',
+  PRIMARY KEY (ride_id)
+)
+  COMMENT = 'ライドの最新ステータステーブル。ride_statusesをもとに構築される';
+
 DROP TABLE IF EXISTS owners;
 CREATE TABLE owners
 (
