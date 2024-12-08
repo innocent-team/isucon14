@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"math/rand"
 	"net/http"
 
 	"github.com/jmoiron/sqlx"
