@@ -17,7 +17,7 @@ const (
 	farePerDistance = 100
 )
 
-var ownerGetChairsCacheMutex = sync.Mutex{}
+var ownerGetChairsCacheMutex = sync.RWMutex{}
 
 type ownerPostOwnersRequest struct {
 	Name string `json:"name"`
@@ -201,10 +201,19 @@ func ownerGetChairs(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	owner := ctx.Value("owner").(*Owner)
 
-	ownerGetChairsCacheMutex.Lock()
+	ownerGetChairsCacheMutex.RLock()
 	cachedResp, found := ownerGetChairsCache.Get(owner.ID)
+	ownerGetChairsCacheMutex.RUnlock()
 	if found {
-		ownerGetChairsCacheMutex.Unlock()
+		writeJSON(w, http.StatusOK, cachedResp)
+		return
+	}
+
+	ownerGetChairsCacheMutex.Lock()
+	ownerGetChairsCacheMutex.RLock()
+	cachedResp, found = ownerGetChairsCache.Get(owner.ID)
+	ownerGetChairsCacheMutex.RUnlock()
+	if found {
 		writeJSON(w, http.StatusOK, cachedResp)
 		return
 	}
