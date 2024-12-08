@@ -3,6 +3,7 @@ package main
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
 	"sync"
@@ -212,6 +213,8 @@ func ownerGetChairs(w http.ResponseWriter, r *http.Request) {
 	ownerGetChairsCacheMutex.Lock()
 	cachedResp, found = ownerGetChairsCache.Get(owner.ID)
 	if found {
+		fmt.Printf("found after unfound")
+		ownerGetChairsCacheMutex.Unlock()
 		writeJSON(w, http.StatusOK, cachedResp)
 		return
 	}
