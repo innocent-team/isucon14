@@ -33,8 +33,10 @@ if [[ "$INSTANCE_NUM" == 1 ]]; then
 
   sudo systemctl restart nginx
   sudo systemctl enable nginx
+  sudo systemctl enable --now isuride-matcher
 else
   sudo systemctl disable --now nginx.service
+  sudo systemctl disable --now isuride-matcher
 fi
 
 # otel-contrib
