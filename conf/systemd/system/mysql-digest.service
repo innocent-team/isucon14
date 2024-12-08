@@ -1,0 +1,12 @@
+[Unit]
+Description=pt-query-digest json dumper
+
+[Service]
+Type=simple
+ExecStartPre=/usr/sbin/logrotate -f /etc/logrotate.conf
+ExecStart=/bin/bash -c "tail -F -n +1 /var/log/mysql/mysql-slow.log | pt-query-digest --output=json --limit=99% --iterations=0 --run-time=30s >> /var/log/mysql-digest.log"
+CPUWeight=10
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
