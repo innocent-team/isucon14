@@ -58,7 +58,7 @@ func internalGetMatching(w http.ResponseWriter, r *http.Request) {
 	// MEMO: 一旦最も待たせているリクエストに適当な空いている椅子マッチさせる実装とする。おそらくもっといい方法があるはず…
 	// PickupLatitude, PickupLongitude を使って、使える近くの椅子を探す
 	ride := &RideType{}
-	if err := db.GetContext(ctx, ride, `SELECT id FROM rides WHERE chair_id IS NULL ORDER BY created_at LIMIT 1`); err != nil {
+	if err := db.GetContext(ctx, ride, `SELECT id FROM rides WHERE chair_id IS NULL ORDER BY created_at DESC LIMIT 1`); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			w.WriteHeader(http.StatusNoContent)
 			return
