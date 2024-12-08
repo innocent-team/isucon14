@@ -41,7 +41,12 @@ fi
 
 # otel-contrib
 # credential があるので config ファイルは含めていない
-sudo systemctl enable --now otelcol-contrib.service
+if [[ "$INSTANCE_NUM" == 3 ]]; then
+  sudo systemctl disable --now otelcol-contrib.service
+else
+  sudo systemctl enable --now otelcol-contrib.service
+fi
+
 
 # APP
 sudo install -o root -g root -m 644 ./conf/systemd/system/isuride-go.service /etc/systemd/system/isuride-go.service
@@ -72,8 +77,8 @@ if [[ "$INSTANCE_NUM" == 3 ]]; then
   echo "MySQL restart したいなら手動で sudo systemctl restart mysql やってね"
 #  sudo systemctl restart mysql
   sudo systemctl enable --now mysql
-  sudo systemctl enable --now mysql-digest
-  sudo systemctl restart --now mysql-digest
+  sudo systemctl disable --now mysql-digest
+#  sudo systemctl restart --now mysql-digest
 else
   sudo systemctl disable --now mysql.service
   sudo systemctl disable --now mysql-digest.service
