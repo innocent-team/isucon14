@@ -227,6 +227,9 @@ func postInitialize(w http.ResponseWriter, r *http.Request) {
 	}
 
 	queue = NewMatchingPubSubQueue()
+	go func() {
+		queue.Start(ctx)
+	}()
 
 	writeJSON(w, http.StatusOK, postInitializeResponse{Language: "go"})
 }
