@@ -5,7 +5,7 @@ ISUCON_DB_PASSWORD="isucon"
 ISUCON_DB_NAME="isuride"
 
 # マッチング間隔（秒）
-ISUCON_MATCHING_INTERVAL=0.4
+ISUCON_MATCHING_INTERVAL=0.1
 
 GOOGLE_APPLICATION_CREDENTIALS=/home/isucon/service-account-credentials.json
 GOOGLE_CLOUD_PROJECT=triple-innocent
