@@ -1,13 +1,11 @@
 package main
 
 import (
-	"context"
 	"database/sql"
 	"errors"
 	"fmt"
 	"net/http"
 
-	"github.com/jmoiron/sqlx"
 	"github.com/oklog/ulid/v2"
 )
 
@@ -96,32 +94,6 @@ type chairPostCoordinateResponse struct {
 	RecordedAt int64 `json:"recorded_at"`
 }
 
-func insertChairLocatoin(ctx context.Context, tx *sqlx.Tx, chairID string, latitude int, longitude int) (string, error) {
-	chairLocationID := ulid.Make().String()
-	if _, err := tx.ExecContext(
-		ctx,
-		`INSERT INTO chair_locations (id, chair_id, latitude, longitude) VALUES (?, ?, ?, ?)`,
-		chairLocationID, chairID, latitude, longitude,
-	); err != nil {
-		return "", err
-	}
-
-	if _, err := tx.ExecContext(
-		ctx,
-		`INSERT INTO chair_locations (id, chair_id, latitude, longitude)
-		VALUES (?, ?, ?, ?)
-		ON DUPLICATE KEY UPDATE
-		chair_id = VALUES(chair_id),
-		latitude = VALUES(latitude),
-		longitude = VALUES(longitude)
-		`,
-		chairLocationID, chairID, latitude, longitude,
-	); err != nil {
-		return "", err
-	}
-	return chairLocationID, nil
-}
-
 // POST /api/chair/coordinate
 func chairPostCoordinate(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
@@ -140,8 +112,12 @@ func chairPostCoordinate(w http.ResponseWriter, r *http.Request) {
 	}
 	defer tx.Rollback()
 
-	chairLocationID, err := insertChairLocatoin(ctx, tx, chair.ID, req.Latitude, req.Longitude)
-	if err != nil {
+	chairLocationID := ulid.Make().String()
+	if _, err := tx.ExecContext(
+		ctx,
+		`INSERT INTO chair_locations (id, chair_id, latitude, longitude) VALUES (?, ?, ?, ?)`,
+		chairLocationID, chair.ID, req.Latitude, req.Longitude,
+	); err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
