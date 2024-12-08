@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/catatsuy/cache"
@@ -15,6 +16,8 @@ const (
 	initialFare     = 500
 	farePerDistance = 100
 )
+
+var ownerGetChairsCacheMutex = sync.Mutex{}
 
 type ownerPostOwnersRequest struct {
 	Name string `json:"name"`
@@ -204,6 +207,14 @@ func ownerGetChairs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	ownerGetChairsCacheMutex.Lock()
+	cachedResp, found = ownerGetChairsCache.Get(owner.ID)
+	if found {
+		ownerGetChairsCacheMutex.Unlock()
+		writeJSON(w, http.StatusOK, cachedResp)
+		return
+	}
+
 	chairs := []chairWithDetail{}
 	if err := db.SelectContext(ctx, &chairs, `SELECT id,
        owner_id,
@@ -251,5 +262,6 @@ WHERE owner_id = ?
 	// 3秒キャッシュする
 	// ref: https://gist.github.com/wtks/0a3268de13856ed6e18c6560023ec436#%E7%8C%B6%E4%BA%88%E6%99%82%E9%96%93
 	ownerGetChairsCache.Set(owner.ID, res, 3*time.Second)
+	ownerGetChairsCacheMutex.Unlock()
 	writeJSON(w, http.StatusOK, res)
 }

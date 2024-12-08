@@ -28,7 +28,7 @@ install -o isucon -g isucon -m 755 ./conf/env/${INSTANCE_NUM}/env.sh /home/isuco
 sudo install -o root -g root -m 644 ./conf/nginx/conf.d/isuride.conf /etc/nginx/conf.d/isuride.conf
 sudo install -o root -g root -m 644 ./conf/nginx/nginx.conf /etc/nginx/nginx.conf
 
-if [[ "$INSTANCE_NUM" == 1 ]]; then
+if [[ "$INSTANCE_NUM" == 1 || "$INSTANCE_NUM" == 2 ]]; then
   sudo nginx -t
 
   sudo systemctl restart nginx
