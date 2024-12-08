@@ -226,6 +226,7 @@ func postInitialize(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	queue.Close()
 	queue = NewMatchingPubSubQueue()
 	go func() {
 		queue.Start(ctx)
