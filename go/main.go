@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"os/signal"
 	"strconv"
 
 	"cloud.google.com/go/profiler"
@@ -30,7 +31,16 @@ import (
 
 var db *sqlx.DB
 
+var queue *MatchingPubSubQueue
+
 func main() {
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer cancel()
+
+	q := NewMatchingPubSubQueue()
+	queue = q
+	go q.Start(ctx)
+
 	mux := setup()
 	slog.Info("Listening on :8080")
 	http.ListenAndServe(":8080", mux)
@@ -215,6 +225,8 @@ func postInitialize(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
+
+	queue.Clear()
 
 	writeJSON(w, http.StatusOK, postInitializeResponse{Language: "go"})
 }

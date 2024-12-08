@@ -478,6 +478,15 @@ func appPostRides(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	rideType := &RideType{
+		ID:              ride.ID,
+		PickupLatitude:  ride.PickupLatitude,
+		PickupLongitude: ride.PickupLongitude,
+	}
+	go func(){
+		queue.Publish(rideType)
+	}()
+
 	writeJSON(w, http.StatusAccepted, &appPostRidesResponse{
 		RideID: rideID,
 		Fare:   fare,
