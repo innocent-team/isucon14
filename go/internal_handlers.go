@@ -95,24 +95,26 @@ func internalGetMatching(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ride = &RideType{}
-	if err := db.GetContext(ctx, ride, `SELECT id FROM rides WHERE chair_id IS NULL ORDER BY created_at LIMIT 1`); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
+	for i := 0; i < 5; i++ {
+		ride = &RideType{}
+		if err := db.GetContext(ctx, ride, `SELECT id FROM rides WHERE chair_id IS NULL ORDER BY created_at LIMIT 1`); err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				w.WriteHeader(http.StatusNoContent)
+				return
+			}
+			writeError(w, http.StatusInternalServerError, err)
+			return
+		}
+
+		missing, err = matcher(ctx, db, ride)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err)
+			return
+		}
+		if missing {
 			w.WriteHeader(http.StatusNoContent)
 			return
 		}
-		writeError(w, http.StatusInternalServerError, err)
-		return
-	}
-
-	missing, err = matcher(ctx, db, ride)
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, err)
-		return
-	}
-	if missing {
-		w.WriteHeader(http.StatusNoContent)
-		return
 	}
 	w.WriteHeader(http.StatusNoContent)
 }
