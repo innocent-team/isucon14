@@ -127,3 +127,32 @@ func calculateDiscountedFaresByRides(ctx context.Context, q sqlx.QueryerContext,
 
 	return discountedFareByRideId, nil
 }
+
+func getLatestChairStatusesByChairIDs(ctx context.Context, q sqlx.QueryerContext, chairIDs []string) (map[string]*LatestChairStatus, error) {
+	if len(chairIDs) == 0 {
+		return nil, nil
+	}
+
+	query, args, err := goquDialect.From("latest_chair_statuses").
+		Where(goqu.Ex{"chair_id": chairIDs}).
+		ToSQL()
+	if err != nil {
+		return nil, err
+	}
+	var chairStatusRows []*LatestChairStatus
+	if err := sqlx.SelectContext(ctx, q, &chairStatusRows, query, args...); err != nil {
+		return nil, err
+	}
+
+	chairStatuses := make(map[string]*LatestChairStatus)
+	for _, chairStatus := range chairStatusRows {
+		if _, ok := chairStatuses[chairStatus.ChairID]; !ok {
+			chairStatuses[chairStatus.ChairID] = &LatestChairStatus{
+				ChairID:   chairStatus.ChairID,
+				Status:    chairStatus.Status,
+				CreatedAt: chairStatus.CreatedAt,
+			}
+		}
+	}
+	return chairStatuses, nil
+}
