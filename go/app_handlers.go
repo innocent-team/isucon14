@@ -918,7 +918,7 @@ func getNearbyChairsOnce(ctx context.Context, tx *sqlx.Tx, lat int, lon int, dis
     c.name AS name,
     c.model AS model,
     cl.latitude AS latitude,
-    cl.longitude AS longitude,
+    cl.longitude AS longitude
 FROM chairs c
 JOIN (
     SELECT cl1.chair_id, cl1.latitude, cl1.longitude
