@@ -913,6 +913,7 @@ type appGetNearbyChairsResponseChair struct {
 	CurrentCoordinate Coordinate `json:"current_coordinate"`
 }
 
+// GET /api/app/nearby-chairs
 func appGetNearbyChairs(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	latStr := r.URL.Query().Get("latitude")
