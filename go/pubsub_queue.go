@@ -17,7 +17,9 @@ func NewMatchingPubSubQueue() *MatchingPubSubQueue {
 }
 
 func (q *MatchingPubSubQueue) Publish(ride *RideType) {
+	log.Printf("queue: enqueueing msg=%#v, length=%d", ride, len(q.queue))
 	q.queue <- ride
+	log.Printf("queue: enqueud msg=%#v, length=%d", ride, len(q.queue))
 }
 
 func (q *MatchingPubSubQueue) Start(ctx context.Context) {
@@ -25,10 +27,11 @@ func (q *MatchingPubSubQueue) Start(ctx context.Context) {
 	for {
 		select {
 		case <-tick.C:
-			log.Printf("queue length: %d", len(q.queue))
+			log.Printf("queue: length=%d", len(q.queue))
 		case <-ctx.Done():
 			return
 		case ride := <-q.queue:
+			log.Printf("queue: grabbed message=%#v, length=%d", ride, len(q.queue))
 			for {
 				// キューの先頭の人をマッチさせる
 				// マッチするまでやりなおす
@@ -41,6 +44,7 @@ func (q *MatchingPubSubQueue) Start(ctx context.Context) {
 					break
 				}
 			}
+			log.Printf("queue: processed message=%#v, length=%d", ride, len(q.queue))
 		}
 	}
 }
