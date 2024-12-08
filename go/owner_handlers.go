@@ -194,21 +194,15 @@ type ownerGetChairResponseChair struct {
 	TotalDistanceUpdatedAt *int64 `json:"total_distance_updated_at,omitempty"`
 }
 
-var ownerGetChairsCache = cache.NewWriteHeavyCacheExpired[string, ownerGetChairResponse]()
+var ownerGetChairsCache = cache.NewReadHeavyCacheExpired[string, ownerGetChairResponse]()
 
 // GET /api/owner/chairs
 func ownerGetChairs(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	owner := ctx.Value("owner").(*Owner)
 
-	cachedResp, found := ownerGetChairsCache.Get(owner.ID)
-	if found {
-		writeJSON(w, http.StatusOK, cachedResp)
-		return
-	}
-
 	ownerGetChairsCacheMutex.Lock()
-	cachedResp, found = ownerGetChairsCache.Get(owner.ID)
+	cachedResp, found := ownerGetChairsCache.Get(owner.ID)
 	if found {
 		ownerGetChairsCacheMutex.Unlock()
 		writeJSON(w, http.StatusOK, cachedResp)
@@ -238,6 +232,7 @@ FROM chairs
                    GROUP BY chair_id) distance_table ON distance_table.chair_id = chairs.id
 WHERE owner_id = ?
 `, owner.ID); err != nil {
+		ownerGetChairsCacheMutex.Unlock()
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
