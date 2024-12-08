@@ -3,6 +3,7 @@ package main
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
 	"sync"
@@ -17,7 +18,7 @@ const (
 	farePerDistance = 100
 )
 
-var ownerGetChairsCacheMutex = sync.Mutex{}
+var ownerGetChairsCacheMutex = sync.RWMutex{}
 
 type ownerPostOwnersRequest struct {
 	Name string `json:"name"`
@@ -201,7 +202,9 @@ func ownerGetChairs(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	owner := ctx.Value("owner").(*Owner)
 
+	ownerGetChairsCacheMutex.RLock()
 	cachedResp, found := ownerGetChairsCache.Get(owner.ID)
+	ownerGetChairsCacheMutex.RUnlock()
 	if found {
 		writeJSON(w, http.StatusOK, cachedResp)
 		return
@@ -210,6 +213,7 @@ func ownerGetChairs(w http.ResponseWriter, r *http.Request) {
 	ownerGetChairsCacheMutex.Lock()
 	cachedResp, found = ownerGetChairsCache.Get(owner.ID)
 	if found {
+		fmt.Printf("found after unfound")
 		ownerGetChairsCacheMutex.Unlock()
 		writeJSON(w, http.StatusOK, cachedResp)
 		return
@@ -238,6 +242,7 @@ FROM chairs
                    GROUP BY chair_id) distance_table ON distance_table.chair_id = chairs.id
 WHERE owner_id = ?
 `, owner.ID); err != nil {
+		ownerGetChairsCacheMutex.Unlock()
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
