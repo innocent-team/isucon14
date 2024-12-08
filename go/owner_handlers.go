@@ -194,7 +194,7 @@ type ownerGetChairResponseChair struct {
 	TotalDistanceUpdatedAt *int64 `json:"total_distance_updated_at,omitempty"`
 }
 
-var ownerGetChairsCache = cache.NewReadHeavyCacheExpired[string, ownerGetChairResponse]()
+var ownerGetChairsCache = cache.NewWriteHeavyCacheExpired[string, ownerGetChairResponse]()
 
 // GET /api/owner/chairs
 func ownerGetChairs(w http.ResponseWriter, r *http.Request) {
