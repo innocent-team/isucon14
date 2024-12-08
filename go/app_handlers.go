@@ -958,17 +958,9 @@ func appGetNearbyChairs(w http.ResponseWriter, r *http.Request) {
 	err = tx.SelectContext(
 		ctx,
 		&chairs,
-		`SELECT * FROM chairs`,
+		// 過去にライドが存在し、かつ、それが完了していない場合はスキップ
+		`SELECT * FROM chairs WHERE id NOT IN (SELECT chair_id FROM latest_chair_statuses WHERE status != 'COMPLETED')`,
 	)
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, err)
-		return
-	}
-	chairIDs := make([]string, len(chairs))
-	for i, chair := range chairs {
-		chairIDs[i] = chair.ID
-	}
-	latestChairStatusById, err := getLatestChairStatusesByChairIDs(ctx, tx, chairIDs)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
@@ -977,12 +969,6 @@ func appGetNearbyChairs(w http.ResponseWriter, r *http.Request) {
 	nearbyChairs := []appGetNearbyChairsResponseChair{}
 	for _, chair := range chairs {
 		if !chair.IsActive {
-			continue
-		}
-
-		// 過去にライドが存在し、かつ、それが完了していない場合はスキップ
-		latestStatus, ok := latestChairStatusById[chair.ID]
-		if ok && latestStatus.Status != "COMPLETED" {
 			continue
 		}
 
