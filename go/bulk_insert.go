@@ -45,6 +45,41 @@ func initializeLatestRideStatuses(ctx context.Context, db *sqlx.DB) error {
 		return err
 	}
 
+	var rides []*Ride
+	if err := db.SelectContext(ctx, &rides, "SELECT * FROM rides WHERE chair_id IS NOT NULL"); err != nil {
+		return err
+	}
+	chairIDByRideId := make(map[string]sql.NullString, len(rides))
+	for _, ride := range rides {
+		chairIDByRideId[ride.ID] = ride.ChairID
+	}
+	// latest_chair_statuses の初期値を構築
+	initialLatestChairStatuses := make([]*LatestChairStatus, 0, len(rideStatusRows))
+	for _, rideStatus := range initialLatestRideStatuses {
+		chairId, ok := chairIDByRideId[rideStatus.RideID]
+		if !ok {
+			continue
+		}
+		if !chairId.Valid {
+			continue
+		}
+		initialLatestChairStatuses = append(initialLatestChairStatuses, &LatestChairStatus{
+			ChairID:   chairId.String,
+			Status:    rideStatus.Status,
+			CreatedAt: rideStatus.CreatedAt,
+		})
+	}
+
+	if len(initialLatestChairStatuses) > 0 {
+		_, err := goquDialect.DB(db).
+			Insert("latest_chair_statuses").
+			Rows(initialLatestChairStatuses).
+			Executor().ExecContext(ctx)
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
