@@ -509,7 +509,8 @@ func appPostRidesEstimatedFare(w http.ResponseWriter, r *http.Request) {
 	}
 	defer tx.Rollback()
 
-	discounted, err := calculateDiscountedFare(ctx, tx, user.ID, nil, req.PickupCoordinate.Latitude, req.PickupCoordinate.Longitude, req.DestinationCoordinate.Latitude, req.DestinationCoordinate.Longitude)
+	// ここは必ず初回利用クーポンを最優先で使う
+	discounted, err := calculateDiscountedFareWithFirstTimeCouponHighPriority(ctx, tx, user.ID, req.PickupCoordinate.Latitude, req.PickupCoordinate.Longitude, req.DestinationCoordinate.Latitude, req.DestinationCoordinate.Longitude)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
@@ -1050,23 +1051,35 @@ func calculateDiscountedFare(ctx context.Context, tx *sqlx.Tx, userID string, ri
 			discount = coupon.Discount
 		}
 	} else {
-		// 初回利用クーポンを最優先で使う
-		if err := tx.GetContext(ctx, &coupon, "SELECT * FROM coupons WHERE user_id = ? AND code = 'CP_NEW2024' AND used_by IS NULL", userID); err != nil {
+		return calculateDiscountedFareWithFirstTimeCouponHighPriority(ctx, tx, userID, pickupLatitude, pickupLongitude, destLatitude, destLongitude)
+	}
+
+	meteredFare := farePerDistance * calculateDistance(pickupLatitude, pickupLongitude, destLatitude, destLongitude)
+	discountedMeteredFare := max(meteredFare-discount, 0)
+
+	return initialFare + discountedMeteredFare, nil
+}
+
+func calculateDiscountedFareWithFirstTimeCouponHighPriority(ctx context.Context, q sqlx.QueryerContext, userID string, pickupLatitude, pickupLongitude, destLatitude, destLongitude int) (int, error) {
+	var coupon Coupon
+	discount := 0
+
+	// 初回利用クーポンを最優先で使う
+	if err := sqlx.GetContext(ctx, q, &coupon, "SELECT * FROM coupons WHERE user_id = ? AND code = 'CP_NEW2024' AND used_by IS NULL", userID); err != nil {
+		if !errors.Is(err, sql.ErrNoRows) {
+			return 0, err
+		}
+
+		// 無いなら他のクーポンを付与された順番に使う
+		if err := sqlx.GetContext(ctx, q, &coupon, "SELECT * FROM coupons WHERE user_id = ? AND used_by IS NULL ORDER BY created_at LIMIT 1", userID); err != nil {
 			if !errors.Is(err, sql.ErrNoRows) {
 				return 0, err
-			}
-
-			// 無いなら他のクーポンを付与された順番に使う
-			if err := tx.GetContext(ctx, &coupon, "SELECT * FROM coupons WHERE user_id = ? AND used_by IS NULL ORDER BY created_at LIMIT 1", userID); err != nil {
-				if !errors.Is(err, sql.ErrNoRows) {
-					return 0, err
-				}
-			} else {
-				discount = coupon.Discount
 			}
 		} else {
 			discount = coupon.Discount
 		}
+	} else {
+		discount = coupon.Discount
 	}
 
 	meteredFare := farePerDistance * calculateDistance(pickupLatitude, pickupLongitude, destLatitude, destLongitude)
