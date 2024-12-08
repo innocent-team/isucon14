@@ -268,7 +268,7 @@ WHERE owner_id = ?
 
 	// 3秒キャッシュする
 	// ref: https://gist.github.com/wtks/0a3268de13856ed6e18c6560023ec436#%E7%8C%B6%E4%BA%88%E6%99%82%E9%96%93
-	ownerGetChairsCache.Set(owner.ID, res, 2500*time.Millisecond)
+	ownerGetChairsCache.Set(owner.ID, res, 2*time.Second)
 	writeJSON(w, http.StatusOK, res)
 	ownerGetChairsCacheMutex.Unlock()
 }
