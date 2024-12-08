@@ -710,7 +710,7 @@ type appGetNotificationResponseChairStats struct {
 	TotalEvaluationAvg float64 `json:"total_evaluation_avg"`
 }
 
-const appGetNofiticationRetryAfterMs = 1000
+const appGetNofiticationRetryAfterMs = 500
 
 func appGetNotification(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
