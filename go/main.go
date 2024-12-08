@@ -13,6 +13,7 @@ import (
 	"os/exec"
 	"strconv"
 
+	"cloud.google.com/go/profiler"
 	texporter "github.com/GoogleCloudPlatform/opentelemetry-operations-go/exporter/trace"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -36,6 +37,26 @@ func main() {
 
 func setup() http.Handler {
 	ctx := context.Background()
+
+	cfg := profiler.Config{
+		Service: serverName,
+		// HHmmss-MMDD
+		// XXX: quota突破したのでバージョンを固定する
+		ServiceVersion: "101300-1208",
+		// ProjectID must be set if not running on GCP.
+		ProjectID: os.Getenv("GOOGLE_CLOUD_PROJECT"),
+
+		// For OpenCensus users:
+		// To see Profiler agent spans in APM backend,
+		// set EnableOCTelemetry to true
+		// EnableOCTelemetry: true,
+	}
+
+	// Profiler initialization, best done as early as possible.
+	if err := profiler.Start(cfg); err != nil {
+		log.Fatal(err)
+	}
+
 	exporter, err := texporter.New()
 	if err != nil {
 		log.Fatalf("texporter.NewExporter: %v", err)
