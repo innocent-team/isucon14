@@ -46,3 +46,23 @@ func initializeLatestRideStatuses(ctx context.Context, db *sqlx.DB) error {
 
 	return nil
 }
+
+func updateLatestRideStatus(ctx context.Context, e sqlx.ExtContext, rideStatus *LatestRideStatus) error {
+	query, args, err := goquDialect.
+		Insert("latest_ride_statuses").
+		Rows(rideStatus).As("new").
+		OnConflict(goqu.DoUpdate("", goqu.Record{
+			"status":     goqu.L("new.status"),
+			"created_at": goqu.L("new.created_at"),
+		})).
+		ToSQL()
+	if err != nil {
+		return err
+	}
+
+	if _, err := e.ExecContext(ctx, query, args...); err != nil {
+		return err
+	}
+
+	return nil
+}
