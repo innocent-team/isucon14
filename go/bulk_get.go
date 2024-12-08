@@ -16,7 +16,7 @@ func getChairsByIds(ctx context.Context, q sqlx.QueryerContext, chairIDs []strin
 		return nil, err
 	}
 	var chairRows []*Chair
-	if err := sqlx.SelectContext(ctx, q, &chairRows, query, args...);err != nil {
+	if err := sqlx.SelectContext(ctx, q, &chairRows, query, args...); err != nil {
 		return nil, err
 	}
 
@@ -37,7 +37,7 @@ func getOwnersByIds(ctx context.Context, q sqlx.QueryerContext, ownerIDs []strin
 		return nil, err
 	}
 	var ownerRows []*Owner
-	if err := sqlx.SelectContext(ctx, q, &ownerRows, query, args...);err != nil {
+	if err := sqlx.SelectContext(ctx, q, &ownerRows, query, args...); err != nil {
 		return nil, err
 	}
 
@@ -70,7 +70,7 @@ func getLatestRideStatusesByRideIds(ctx context.Context, q sqlx.QueryerContext, 
 		return nil, err
 	}
 	var rideStatusRows []*RideStatus
-	if err := sqlx.SelectContext(ctx, q, &rideStatusRows, query, args...);err != nil {
+	if err := sqlx.SelectContext(ctx, q, &rideStatusRows, query, args...); err != nil {
 		return nil, err
 	}
 
@@ -81,4 +81,54 @@ func getLatestRideStatusesByRideIds(ctx context.Context, q sqlx.QueryerContext, 
 		}
 	}
 	return rideStatuses, nil
+}
+
+func calculateDiscountedFaresByRides(ctx context.Context, q sqlx.QueryerContext, rides []Ride) (map[string]int, error) {
+	if len(rides) == 0 {
+		return nil, nil
+	}
+
+	rideIDs := make([]string, 0, len(rides))
+	for _, ride := range rides {
+		rideIDs = append(rideIDs, ride.ID)
+	}
+
+	query, args, err := sqlx.In("SELECT * FROM coupons WHERE used_by IN (?)", rideIDs)
+	if err != nil {
+		return nil, err
+	}
+
+	var couponRows []*Coupon
+	if err := sqlx.SelectContext(ctx, q, &couponRows, query, args...); err != nil {
+		return nil, err
+	}
+
+	couponByRideID := make(map[string]*Coupon)
+	for _, coupon := range couponRows {
+		if coupon.UsedBy == nil {
+			continue
+		}
+		couponByRideID[*coupon.UsedBy] = coupon
+	}
+
+	discountedFareByRideId := make(map[string]int)
+	for _, ride := range rides {
+		discount := 0
+		coupon, ok := couponByRideID[ride.ID]
+		if ok {
+			discount = coupon.Discount
+		}
+
+		destLatitude := ride.DestinationLatitude
+		destLongitude := ride.DestinationLongitude
+		pickupLatitude := ride.PickupLatitude
+		pickupLongitude := ride.PickupLongitude
+
+		meteredFare := farePerDistance * calculateDistance(pickupLatitude, pickupLongitude, destLatitude, destLongitude)
+		discountedMeteredFare := max(meteredFare-discount, 0)
+
+		discountedFareByRideId[ride.ID] = initialFare + discountedMeteredFare
+	}
+
+	return discountedFareByRideId, nil
 }

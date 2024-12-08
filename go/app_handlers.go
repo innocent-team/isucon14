@@ -239,6 +239,11 @@ func appGetRides(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
+	discountedFareByRideId, err := calculateDiscountedFaresByRides(ctx, tx, rides)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
 
 	items := []getAppRidesResponseItem{}
 	for _, ride := range rides {
@@ -251,11 +256,7 @@ func appGetRides(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 
-		fare, err := calculateDiscountedFare(ctx, tx, &ride)
-		if err != nil {
-			writeError(w, http.StatusInternalServerError, err)
-			return
-		}
+		fare := discountedFareByRideId[ride.ID]
 
 		item := getAppRidesResponseItem{
 			ID:                    ride.ID,
