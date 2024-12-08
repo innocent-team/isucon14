@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"log"
+	"time"
 )
 
 type MatchingPubSubQueue struct {
@@ -20,8 +21,11 @@ func (q *MatchingPubSubQueue) Publish(ride *RideType) {
 }
 
 func (q *MatchingPubSubQueue) Start(ctx context.Context) {
+	tick := time.NewTicker(time.Second)
 	for {
 		select {
+		case <-tick.C:
+			log.Printf("queue length: %d", len(q.queue))
 		case <-ctx.Done():
 			return
 		case ride := <-q.queue:
