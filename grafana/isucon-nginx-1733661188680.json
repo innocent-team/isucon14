@@ -1,0 +1,1425 @@
+{
+  "__inputs": [
+    {
+      "name": "DS_GRAFANA-CLICKHOUSE-DATASOURCE",
+      "label": "grafana-clickhouse-datasource",
+      "description": "",
+      "type": "datasource",
+      "pluginId": "grafana-clickhouse-datasource",
+      "pluginName": "ClickHouse"
+    }
+  ],
+  "__elements": {},
+  "__requires": [
+    {
+      "type": "panel",
+      "id": "bargauge",
+      "name": "Bar gauge",
+      "version": ""
+    },
+    {
+      "type": "grafana",
+      "id": "grafana",
+      "name": "Grafana",
+      "version": "11.3.1"
+    },
+    {
+      "type": "datasource",
+      "id": "grafana-clickhouse-datasource",
+      "name": "ClickHouse",
+      "version": "4.4.0"
+    },
+    {
+      "type": "panel",
+      "id": "logs",
+      "name": "Logs",
+      "version": ""
+    },
+    {
+      "type": "panel",
+      "id": "table",
+      "name": "Table",
+      "version": ""
+    },
+    {
+      "type": "panel",
+      "id": "timeseries",
+      "name": "Time series",
+      "version": ""
+    }
+  ],
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "${DS_GRAFANA-CLICKHOUSE-DATASOURCE}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "bars",
+            "fillOpacity": 100,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "normal"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "displayName": "${__field.labels.Operation}",
+          "fieldMinMax": false,
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 2,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "11.3.1",
+      "targets": [
+        {
+          "builderOptions": {
+            "aggregates": [
+              {
+                "aggregateType": "count",
+                "alias": "Requests",
+                "column": "*"
+              }
+            ],
+            "columns": [
+              {
+                "hint": "time",
+                "name": "Timestamp",
+                "type": "DateTime64(9)"
+              }
+            ],
+            "database": "otel",
+            "filters": [
+              {
+                "condition": "AND",
+                "filterType": "custom",
+                "hint": "time",
+                "key": "",
+                "operator": "WITH IN DASHBOARD TIME RANGE",
+                "type": "datetime"
+              },
+              {
+                "condition": "AND",
+                "filterType": "custom",
+                "key": "Operation",
+                "label": "Operation",
+                "operator": "IN",
+                "type": "LowCardinality(String)",
+                "value": [
+                  "$Operation"
+                ]
+              }
+            ],
+            "groupBy": [
+              "Operation"
+            ],
+            "limit": 100000,
+            "meta": {},
+            "mode": "trend",
+            "orderBy": [
+              {
+                "default": true,
+                "dir": "ASC",
+                "hint": "time",
+                "name": ""
+              }
+            ],
+            "queryType": "timeseries",
+            "table": "nginx_accesses"
+          },
+          "editorType": "builder",
+          "format": 0,
+          "pluginVersion": "4.4.0",
+          "rawSql": "SELECT $__timeInterval(Timestamp) as \"time\", Operation, count(*) as Requests FROM \"otel\".\"nginx_accesses\" WHERE ( time >= $__fromTime AND time <= $__toTime ) AND ( Operation IN ($Operation) ) GROUP BY Operation, time ORDER BY time ASC LIMIT 100000",
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "${DS_GRAFANA-CLICKHOUSE-DATASOURCE}"
+          }
+        }
+      ],
+      "title": "nginx: Requests",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "${DS_GRAFANA-CLICKHOUSE-DATASOURCE}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "always",
+            "spanNulls": 60000,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "displayName": "${__field.labels.Operation}",
+          "fieldMinMax": false,
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "ns"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 7
+      },
+      "id": 7,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "11.3.1",
+      "targets": [
+        {
+          "builderOptions": {
+            "aggregates": [
+              {
+                "aggregateType": "max",
+                "alias": "",
+                "column": "Duration"
+              }
+            ],
+            "columns": [
+              {
+                "alias": "Timestamp",
+                "hint": "time",
+                "name": "Timestamp",
+                "type": "DateTime64(9)"
+              }
+            ],
+            "database": "otel",
+            "filters": [
+              {
+                "condition": "AND",
+                "filterType": "custom",
+                "hint": "time",
+                "key": "",
+                "operator": "WITH IN DASHBOARD TIME RANGE",
+                "type": "datetime"
+              },
+              {
+                "condition": "AND",
+                "filterType": "custom",
+                "key": "Operation",
+                "label": "Operation",
+                "operator": "IN",
+                "type": "LowCardinality(String)",
+                "value": [
+                  "$Operation"
+                ]
+              }
+            ],
+            "groupBy": [
+              "Operation"
+            ],
+            "limit": 1000,
+            "meta": {},
+            "mode": "trend",
+            "orderBy": [
+              {
+                "default": true,
+                "dir": "ASC",
+                "hint": "time",
+                "name": ""
+              }
+            ],
+            "queryType": "timeseries",
+            "table": "nginx_accesses"
+          },
+          "editorType": "sql",
+          "format": 0,
+          "meta": {
+            "builderOptions": {
+              "aggregates": [
+                {
+                  "aggregateType": "max",
+                  "alias": "",
+                  "column": "Duration"
+                }
+              ],
+              "columns": [
+                {
+                  "alias": "Timestamp",
+                  "hint": "time",
+                  "name": "Timestamp",
+                  "type": "DateTime64(9)"
+                }
+              ],
+              "database": "otel",
+              "filters": [
+                {
+                  "condition": "AND",
+                  "filterType": "custom",
+                  "hint": "time",
+                  "key": "",
+                  "operator": "WITH IN DASHBOARD TIME RANGE",
+                  "type": "datetime"
+                },
+                {
+                  "condition": "AND",
+                  "filterType": "custom",
+                  "key": "Operation",
+                  "label": "Operation",
+                  "operator": "IN",
+                  "type": "LowCardinality(String)",
+                  "value": [
+                    "$Operation"
+                  ]
+                }
+              ],
+              "groupBy": [
+                "Operation"
+              ],
+              "limit": 1000,
+              "meta": {},
+              "mode": "trend",
+              "orderBy": [
+                {
+                  "default": true,
+                  "dir": "ASC",
+                  "hint": "time",
+                  "name": ""
+                }
+              ],
+              "queryType": "timeseries",
+              "table": "nginx_accesses"
+            }
+          },
+          "pluginVersion": "4.4.0",
+          "queryType": "timeseries",
+          "rawSql": "SELECT $__timeInterval(Timestamp) as \"time\", Operation, quantile(0.9)(Duration) FROM \"otel\".\"nginx_accesses\" WHERE ( time >= $__fromTime AND time <= $__toTime ) AND ( Operation IN ($Operation) ) GROUP BY Operation, time ORDER BY time ASC LIMIT 100000",
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "${DS_GRAFANA-CLICKHOUSE-DATASOURCE}"
+          }
+        }
+      ],
+      "title": "nginx: p90 Response time",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "${DS_GRAFANA-CLICKHOUSE-DATASOURCE}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 7
+      },
+      "id": 6,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true
+      },
+      "pluginVersion": "11.3.1",
+      "targets": [
+        {
+          "builderOptions": {
+            "columns": [
+              {
+                "hint": "trace_id",
+                "name": "TraceId"
+              },
+              {
+                "hint": "trace_span_id",
+                "name": "SpanId"
+              },
+              {
+                "hint": "trace_parent_span_id",
+                "name": "ParentSpanId"
+              },
+              {
+                "hint": "trace_service_name",
+                "name": "ServiceName"
+              },
+              {
+                "hint": "trace_operation_name",
+                "name": "SpanName"
+              },
+              {
+                "hint": "time",
+                "name": "Timestamp"
+              },
+              {
+                "hint": "trace_duration_time",
+                "name": "Duration"
+              },
+              {
+                "hint": "trace_tags",
+                "name": "SpanAttributes"
+              },
+              {
+                "hint": "trace_service_tags",
+                "name": "ResourceAttributes"
+              }
+            ],
+            "database": "otel",
+            "filters": [
+              {
+                "condition": "AND",
+                "filterType": "custom",
+                "hint": "time",
+                "key": "",
+                "operator": "WITH IN DASHBOARD TIME RANGE",
+                "type": "datetime"
+              },
+              {
+                "condition": "AND",
+                "filterType": "custom",
+                "hint": "trace_parent_span_id",
+                "key": "",
+                "operator": "IS EMPTY",
+                "type": "string",
+                "value": ""
+              },
+              {
+                "condition": "AND",
+                "filterType": "custom",
+                "hint": "trace_duration_time",
+                "key": "",
+                "operator": ">",
+                "type": "UInt64",
+                "value": 0
+              },
+              {
+                "condition": "AND",
+                "filterType": "custom",
+                "hint": "trace_service_name",
+                "key": "",
+                "operator": "=",
+                "type": "string",
+                "value": "nginx"
+              },
+              {
+                "condition": "AND",
+                "filterType": "custom",
+                "key": "SpanName",
+                "label": "SpanName",
+                "operator": "IN",
+                "type": "LowCardinality(String)",
+                "value": [
+                  "$Operation"
+                ]
+              }
+            ],
+            "limit": 1000,
+            "meta": {
+              "isTraceIdMode": false,
+              "otelEnabled": true,
+              "otelVersion": "latest",
+              "traceDurationUnit": "nanoseconds",
+              "traceId": ""
+            },
+            "mode": "list",
+            "orderBy": [
+              {
+                "default": true,
+                "dir": "DESC",
+                "hint": "time",
+                "name": ""
+              },
+              {
+                "default": true,
+                "dir": "DESC",
+                "hint": "trace_duration_time",
+                "name": ""
+              }
+            ],
+            "queryType": "traces",
+            "table": "otel_traces_normalized"
+          },
+          "editorType": "builder",
+          "format": 1,
+          "pluginVersion": "4.4.0",
+          "rawSql": "SELECT \"TraceId\" as traceID, \"ServiceName\" as serviceName, \"SpanName\" as operationName, \"Timestamp\" as startTime, multiply(\"Duration\", 0.000001) as duration FROM \"otel\".\"otel_traces_normalized\" WHERE ( Timestamp >= $__fromTime AND Timestamp <= $__toTime ) AND ( ParentSpanId = '' ) AND ( Duration > 0 ) AND ( ServiceName = 'nginx' ) AND ( SpanName IN ($Operation) ) ORDER BY Timestamp DESC, Duration DESC LIMIT 1000",
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "${DS_GRAFANA-CLICKHOUSE-DATASOURCE}"
+          }
+        }
+      ],
+      "title": "nginx: Traces",
+      "type": "table"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 15
+      },
+      "id": 8,
+      "panels": [],
+      "title": "Stats for all operations",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "${DS_GRAFANA-CLICKHOUSE-DATASOURCE}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "purple",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "req"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 6,
+        "x": 0,
+        "y": 16
+      },
+      "id": 4,
+      "options": {
+        "displayMode": "basic",
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
+        },
+        "maxVizHeight": 300,
+        "minVizHeight": 16,
+        "minVizWidth": 8,
+        "namePlacement": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "/^count\\(\\)$/",
+          "values": true
+        },
+        "showUnfilled": false,
+        "sizing": "auto",
+        "valueMode": "color"
+      },
+      "pluginVersion": "11.3.1",
+      "targets": [
+        {
+          "builderOptions": {
+            "aggregates": [
+              {
+                "aggregateType": "count",
+                "column": "*"
+              }
+            ],
+            "columns": [
+              {
+                "alias": "Operation",
+                "custom": false,
+                "name": "Operation",
+                "type": "LowCardinality(String)"
+              }
+            ],
+            "database": "otel",
+            "filters": [
+              {
+                "condition": "AND",
+                "filterType": "custom",
+                "key": "Timestamp",
+                "label": "Timestamp",
+                "operator": "WITH IN DASHBOARD TIME RANGE",
+                "type": "DateTime64(9)",
+                "value": "TODAY"
+              }
+            ],
+            "groupBy": [
+              "Operation"
+            ],
+            "limit": 10000,
+            "meta": {},
+            "mode": "aggregate",
+            "orderBy": [
+              {
+                "dir": "DESC",
+                "name": "count(*)"
+              }
+            ],
+            "queryType": "table",
+            "table": "nginx_accesses"
+          },
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "${DS_GRAFANA-CLICKHOUSE-DATASOURCE}"
+          },
+          "editorType": "builder",
+          "format": 1,
+          "meta": {
+            "builderOptions": {
+              "columns": [],
+              "database": "otel",
+              "limit": 1000,
+              "meta": {},
+              "mode": "list",
+              "queryType": "table",
+              "table": "nginx_accesses"
+            }
+          },
+          "pluginVersion": "4.4.0",
+          "queryType": "table",
+          "rawSql": "SELECT Operation, count(*) FROM \"otel\".\"nginx_accesses\" WHERE ( Timestamp >= $__fromTime AND Timestamp <= $__toTime ) GROUP BY Operation ORDER BY count(*) DESC LIMIT 10000",
+          "refId": "A"
+        }
+      ],
+      "title": "nginx: Request count",
+      "type": "bargauge"
+    },
+    {
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "${DS_GRAFANA-CLICKHOUSE-DATASOURCE}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "blue",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "ns"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 6,
+        "x": 6,
+        "y": 16
+      },
+      "id": 1,
+      "options": {
+        "displayMode": "basic",
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
+        },
+        "maxVizHeight": 300,
+        "minVizHeight": 16,
+        "minVizWidth": 8,
+        "namePlacement": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "/^sum\\(Duration\\)$/",
+          "values": true
+        },
+        "showUnfilled": false,
+        "sizing": "auto",
+        "valueMode": "color"
+      },
+      "pluginVersion": "11.3.1",
+      "targets": [
+        {
+          "builderOptions": {
+            "aggregates": [
+              {
+                "aggregateType": "sum",
+                "column": "Duration"
+              }
+            ],
+            "columns": [
+              {
+                "alias": "Operation",
+                "custom": false,
+                "name": "Operation",
+                "type": "LowCardinality(String)"
+              }
+            ],
+            "database": "otel",
+            "filters": [
+              {
+                "condition": "AND",
+                "filterType": "custom",
+                "key": "Timestamp",
+                "label": "Timestamp",
+                "operator": "WITH IN DASHBOARD TIME RANGE",
+                "type": "DateTime64(9)",
+                "value": "TODAY"
+              }
+            ],
+            "groupBy": [
+              "Operation"
+            ],
+            "limit": 10000,
+            "meta": {},
+            "mode": "aggregate",
+            "orderBy": [
+              {
+                "dir": "DESC",
+                "name": "sum(Duration)"
+              }
+            ],
+            "queryType": "table",
+            "table": "nginx_accesses"
+          },
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "${DS_GRAFANA-CLICKHOUSE-DATASOURCE}"
+          },
+          "editorType": "builder",
+          "format": 1,
+          "meta": {
+            "builderOptions": {
+              "columns": [],
+              "database": "otel",
+              "limit": 1000,
+              "meta": {},
+              "mode": "list",
+              "queryType": "table",
+              "table": "nginx_accesses"
+            }
+          },
+          "pluginVersion": "4.4.0",
+          "queryType": "table",
+          "rawSql": "SELECT Operation, sum(Duration) FROM \"otel\".\"nginx_accesses\" WHERE ( Timestamp >= $__fromTime AND Timestamp <= $__toTime ) GROUP BY Operation ORDER BY sum(Duration) DESC LIMIT 10000",
+          "refId": "A"
+        }
+      ],
+      "title": "nginx: Sum response time",
+      "type": "bargauge"
+    },
+    {
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "${DS_GRAFANA-CLICKHOUSE-DATASOURCE}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "green",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "ns"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 6,
+        "x": 12,
+        "y": 16
+      },
+      "id": 3,
+      "options": {
+        "displayMode": "basic",
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
+        },
+        "maxVizHeight": 300,
+        "minVizHeight": 16,
+        "minVizWidth": 8,
+        "namePlacement": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "/^avg\\(Duration\\)$/",
+          "values": true
+        },
+        "showUnfilled": false,
+        "sizing": "auto",
+        "valueMode": "color"
+      },
+      "pluginVersion": "11.3.1",
+      "targets": [
+        {
+          "builderOptions": {
+            "aggregates": [
+              {
+                "aggregateType": "avg",
+                "column": "Duration"
+              }
+            ],
+            "columns": [
+              {
+                "alias": "Operation",
+                "custom": false,
+                "name": "Operation",
+                "type": "LowCardinality(String)"
+              }
+            ],
+            "database": "otel",
+            "filters": [
+              {
+                "condition": "AND",
+                "filterType": "custom",
+                "key": "Timestamp",
+                "label": "Timestamp",
+                "operator": "WITH IN DASHBOARD TIME RANGE",
+                "type": "DateTime64(9)",
+                "value": "TODAY"
+              }
+            ],
+            "groupBy": [
+              "Operation"
+            ],
+            "limit": 10000,
+            "meta": {},
+            "mode": "aggregate",
+            "orderBy": [
+              {
+                "dir": "DESC",
+                "name": "avg(Duration)"
+              }
+            ],
+            "queryType": "table",
+            "table": "nginx_accesses"
+          },
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "${DS_GRAFANA-CLICKHOUSE-DATASOURCE}"
+          },
+          "editorType": "builder",
+          "format": 1,
+          "meta": {
+            "builderOptions": {
+              "columns": [],
+              "database": "otel",
+              "limit": 1000,
+              "meta": {},
+              "mode": "list",
+              "queryType": "table",
+              "table": "nginx_accesses"
+            }
+          },
+          "pluginVersion": "4.4.0",
+          "queryType": "table",
+          "rawSql": "SELECT Operation, avg(Duration) FROM \"otel\".\"nginx_accesses\" WHERE ( Timestamp >= $__fromTime AND Timestamp <= $__toTime ) GROUP BY Operation ORDER BY avg(Duration) DESC LIMIT 10000",
+          "refId": "A"
+        }
+      ],
+      "title": "nginx: Average response time",
+      "type": "bargauge"
+    },
+    {
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "${DS_GRAFANA-CLICKHOUSE-DATASOURCE}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "green",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "ns"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 6,
+        "x": 18,
+        "y": 16
+      },
+      "id": 5,
+      "options": {
+        "displayMode": "basic",
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
+        },
+        "maxVizHeight": 300,
+        "minVizHeight": 16,
+        "minVizWidth": 8,
+        "namePlacement": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "/^quantile\\(0\\.9\\)\\(Duration\\)$/",
+          "values": true
+        },
+        "showUnfilled": false,
+        "sizing": "auto",
+        "valueMode": "color"
+      },
+      "pluginVersion": "11.3.1",
+      "targets": [
+        {
+          "builderOptions": {
+            "columns": [],
+            "database": "otel",
+            "limit": 1000,
+            "meta": {},
+            "mode": "list",
+            "queryType": "table",
+            "table": "otel_logs"
+          },
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "${DS_GRAFANA-CLICKHOUSE-DATASOURCE}"
+          },
+          "editorType": "sql",
+          "format": 1,
+          "meta": {
+            "builderOptions": {
+              "columns": [],
+              "database": "otel",
+              "limit": 1000,
+              "meta": {},
+              "mode": "list",
+              "queryType": "table",
+              "table": "otel_logs"
+            }
+          },
+          "pluginVersion": "4.4.0",
+          "queryType": "table",
+          "rawSql": "SELECT Operation, quantile(0.9)(Duration) FROM \"otel\".\"nginx_accesses\" WHERE ( Timestamp >= $__fromTime AND Timestamp <= $__toTime ) GROUP BY Operation ORDER BY quantile(0.9)(Duration) DESC LIMIT 10000",
+          "refId": "A"
+        }
+      ],
+      "title": "nginx: p90 response time",
+      "type": "bargauge"
+    },
+    {
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "${DS_GRAFANA-CLICKHOUSE-DATASOURCE}"
+      },
+      "gridPos": {
+        "h": 11,
+        "w": 18,
+        "x": 0,
+        "y": 25
+      },
+      "id": 10,
+      "options": {
+        "dedupStrategy": "none",
+        "enableLogDetails": true,
+        "prettifyLogMessage": false,
+        "showCommonLabels": false,
+        "showLabels": false,
+        "showTime": false,
+        "sortOrder": "Descending",
+        "wrapLogMessage": true
+      },
+      "pluginVersion": "11.3.1",
+      "targets": [
+        {
+          "builderOptions": {
+            "columns": [
+              {
+                "hint": "trace_id",
+                "name": "TraceId"
+              },
+              {
+                "hint": "time",
+                "name": "Timestamp"
+              },
+              {
+                "hint": "log_level",
+                "name": "SeverityText"
+              },
+              {
+                "hint": "log_message",
+                "name": "Body"
+              },
+              {
+                "hint": "log_labels",
+                "name": "LogAttributes"
+              }
+            ],
+            "database": "otel",
+            "filters": [
+              {
+                "condition": "AND",
+                "filterType": "custom",
+                "hint": "time",
+                "key": "",
+                "operator": "WITH IN DASHBOARD TIME RANGE",
+                "type": "datetime"
+              },
+              {
+                "condition": "AND",
+                "filterType": "custom",
+                "hint": "log_level",
+                "key": "",
+                "operator": "IS ANYTHING",
+                "type": "string"
+              },
+              {
+                "condition": "AND",
+                "filterType": "custom",
+                "key": "LogAttributes",
+                "label": "LogAttributes",
+                "mapKey": "log.file.name",
+                "operator": "IS ANYTHING",
+                "type": "Map(LowCardinality(String), String)",
+                "value": "error.log"
+              }
+            ],
+            "limit": 1000,
+            "meta": {
+              "logMessageLike": "",
+              "otelEnabled": true,
+              "otelVersion": "latest"
+            },
+            "mode": "list",
+            "orderBy": [
+              {
+                "default": true,
+                "dir": "DESC",
+                "hint": "time",
+                "name": ""
+              }
+            ],
+            "queryType": "logs",
+            "table": "otel_logs"
+          },
+          "editorType": "sql",
+          "format": 2,
+          "meta": {
+            "builderOptions": {
+              "columns": [
+                {
+                  "hint": "trace_id",
+                  "name": "TraceId"
+                },
+                {
+                  "hint": "time",
+                  "name": "Timestamp"
+                },
+                {
+                  "hint": "log_level",
+                  "name": "SeverityText"
+                },
+                {
+                  "hint": "log_message",
+                  "name": "Body"
+                },
+                {
+                  "hint": "log_labels",
+                  "name": "LogAttributes"
+                }
+              ],
+              "database": "otel",
+              "filters": [
+                {
+                  "condition": "AND",
+                  "filterType": "custom",
+                  "hint": "time",
+                  "key": "",
+                  "operator": "WITH IN DASHBOARD TIME RANGE",
+                  "type": "datetime"
+                },
+                {
+                  "condition": "AND",
+                  "filterType": "custom",
+                  "hint": "log_level",
+                  "key": "",
+                  "operator": "IS ANYTHING",
+                  "type": "string"
+                },
+                {
+                  "condition": "AND",
+                  "filterType": "custom",
+                  "key": "LogAttributes",
+                  "label": "LogAttributes",
+                  "mapKey": "log.file.name",
+                  "operator": "IS ANYTHING",
+                  "type": "Map(LowCardinality(String), String)",
+                  "value": "error.log"
+                }
+              ],
+              "limit": 1000,
+              "meta": {
+                "logMessageLike": "",
+                "otelEnabled": true,
+                "otelVersion": "latest"
+              },
+              "mode": "list",
+              "orderBy": [
+                {
+                  "default": true,
+                  "dir": "DESC",
+                  "hint": "time",
+                  "name": ""
+                }
+              ],
+              "queryType": "logs",
+              "table": "otel_logs"
+            }
+          },
+          "pluginVersion": "4.4.0",
+          "queryType": "logs",
+          "rawSql": "SELECT Timestamp as \"timestamp\", Message as \"body\", SeverityText as \"level\", Hostname FROM \"otel\".\"chi_log\" WHERE ( timestamp >= $__fromTime AND timestamp <= $__toTime AND SeverityText != 'INFO') ORDER BY timestamp DESC LIMIT 1000",
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "${DS_GRAFANA-CLICKHOUSE-DATASOURCE}"
+          }
+        }
+      ],
+      "title": "app: journald isuride-go log",
+      "type": "logs"
+    },
+    {
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "${DS_GRAFANA-CLICKHOUSE-DATASOURCE}"
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 18,
+        "x": 0,
+        "y": 36
+      },
+      "id": 9,
+      "options": {
+        "dedupStrategy": "none",
+        "enableLogDetails": true,
+        "prettifyLogMessage": false,
+        "showCommonLabels": false,
+        "showLabels": false,
+        "showTime": false,
+        "sortOrder": "Descending",
+        "wrapLogMessage": false
+      },
+      "pluginVersion": "11.3.1",
+      "targets": [
+        {
+          "builderOptions": {
+            "columns": [
+              {
+                "hint": "trace_id",
+                "name": "TraceId"
+              },
+              {
+                "hint": "time",
+                "name": "Timestamp"
+              },
+              {
+                "hint": "log_level",
+                "name": "SeverityText"
+              },
+              {
+                "hint": "log_message",
+                "name": "Body"
+              },
+              {
+                "hint": "log_labels",
+                "name": "LogAttributes"
+              }
+            ],
+            "database": "otel",
+            "filters": [
+              {
+                "condition": "AND",
+                "filterType": "custom",
+                "hint": "time",
+                "key": "",
+                "operator": "WITH IN DASHBOARD TIME RANGE",
+                "type": "datetime"
+              },
+              {
+                "condition": "AND",
+                "filterType": "custom",
+                "hint": "log_level",
+                "key": "",
+                "operator": "IS ANYTHING",
+                "type": "string"
+              },
+              {
+                "condition": "AND",
+                "filterType": "custom",
+                "key": "LogAttributes",
+                "label": "LogAttributes",
+                "mapKey": "log.file.name",
+                "operator": "=",
+                "type": "Map(LowCardinality(String), String)",
+                "value": "error.log"
+              }
+            ],
+            "limit": 1000,
+            "meta": {
+              "logMessageLike": "",
+              "otelEnabled": true,
+              "otelVersion": "latest"
+            },
+            "mode": "list",
+            "orderBy": [
+              {
+                "default": true,
+                "dir": "DESC",
+                "hint": "time",
+                "name": ""
+              }
+            ],
+            "queryType": "logs",
+            "table": "otel_logs"
+          },
+          "editorType": "builder",
+          "format": 2,
+          "pluginVersion": "4.4.0",
+          "rawSql": "SELECT Timestamp as \"timestamp\", Body as \"body\", SeverityText as \"level\", LogAttributes as \"labels\", TraceId as \"traceID\" FROM \"otel\".\"otel_logs\" WHERE ( timestamp >= $__fromTime AND timestamp <= $__toTime ) AND ( LogAttributes['log.file.name'] = 'error.log' ) ORDER BY timestamp DESC LIMIT 1000",
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "${DS_GRAFANA-CLICKHOUSE-DATASOURCE}"
+          }
+        }
+      ],
+      "title": "nginx: error log",
+      "type": "logs"
+    }
+  ],
+  "schemaVersion": 40,
+  "tags": [],
+  "templating": {
+    "list": [
+      {
+        "current": {},
+        "definition": "SELECT DISTINCT(Operation) FROM nginx_accesses",
+        "description": "",
+        "includeAll": true,
+        "label": "Operation",
+        "multi": true,
+        "name": "Operation",
+        "options": [],
+        "query": "SELECT DISTINCT(Operation) FROM nginx_accesses",
+        "refresh": 1,
+        "regex": "",
+        "sort": 1,
+        "type": "query"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-15m",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "isucon-nginx",
+  "uid": "de687y1mxqdj4f",
+  "version": 17,
+  "weekStart": ""
+}
