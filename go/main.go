@@ -1,9 +1,11 @@
 package main
 
 import (
+	"context"
 	crand "crypto/rand"
 	"encoding/json"
 	"fmt"
+	"log"
 	"log/slog"
 	"net"
 	"net/http"
@@ -11,10 +13,17 @@ import (
 	"os/exec"
 	"strconv"
 
+	texporter "github.com/GoogleCloudPlatform/opentelemetry-operations-go/exporter/trace"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-sql-driver/mysql"
 	"github.com/jmoiron/sqlx"
+	"github.com/riandyrn/otelchi"
+	otelchimetric "github.com/riandyrn/otelchi/metric"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/sdk/resource"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 )
 
 var db *sqlx.DB
@@ -26,6 +35,33 @@ func main() {
 }
 
 func setup() http.Handler {
+	ctx := context.Background()
+	exporter, err := texporter.New()
+	if err != nil {
+		log.Fatalf("texporter.NewExporter: %v", err)
+	}
+	res, err := resource.New(
+		ctx,
+		resource.WithAttributes(
+			// sevice.name attributeを指定する
+			// これを指定しないとサービスが unknown_service:app になって気まずい
+			semconv.ServiceNameKey.String(serverName),
+		),
+	)
+	if err != nil {
+		log.Fatalf("resource.New: %v", err)
+	}
+	tp := sdktrace.NewTracerProvider(
+		sdktrace.WithBatcher(exporter),
+		sdktrace.WithResource(res),
+	)
+	defer tp.ForceFlush(ctx) // flushes any pending spans
+	otel.SetTracerProvider(tp)
+
+	if err := registerOtelsqlDriver(); err != nil {
+		log.Fatalf("Failed to register otelsql driver: %v", err)
+	}
+
 	host := os.Getenv("ISUCON_DB_HOST")
 	if host == "" {
 		host = "127.0.0.1"
@@ -34,8 +70,7 @@ func setup() http.Handler {
 	if port == "" {
 		port = "3306"
 	}
-	_, err := strconv.Atoi(port)
-	if err != nil {
+	if _, err := strconv.Atoi(port); err != nil {
 		panic(fmt.Sprintf("failed to convert DB port number from ISUCON_DB_PORT environment variable into int: %v", err))
 	}
 	user := os.Getenv("ISUCON_DB_USER")
@@ -68,6 +103,13 @@ func setup() http.Handler {
 	mux := chi.NewRouter()
 	mux.Use(middleware.Logger)
 	mux.Use(middleware.Recoverer)
+	baseCfg := otelchimetric.NewBaseConfig(serverName)
+	mux.Use(
+		otelchi.Middleware(serverName, otelchi.WithChiRoutes(mux)),
+		otelchimetric.NewRequestDurationMillis(baseCfg),
+		otelchimetric.NewRequestInFlight(baseCfg),
+		otelchimetric.NewResponseSizeBytes(baseCfg),
+	)
 	mux.HandleFunc("POST /api/initialize", postInitialize)
 
 	// app handlers
