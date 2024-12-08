@@ -21,35 +21,33 @@ type ChairType struct {
 
 func searchNearestbyAvaiableChair(ctx context.Context, db *sqlx.DB, latitude int, longitude int) (*ChairType, bool, error) {
 	// PickupLatitude, PickupLongitude を使って、使える近くの椅子を探す
-	chairs := &[]ChairType{}
-	if err := db.SelectContext(ctx, chairs, `
-	SELECT id FROM chairs
+	chair := &ChairType{}
+	if err := db.GetContext(ctx, chair, `
+	SELECT id
+	FROM ( 
+	
+	SELECT id, latitude, longitude,
+		(SELECT COUNT(*) = 0 FROM
+				(SELECT COUNT(chair_sent_at) = 6 AS completed
+					FROM ride_statuses
+					WHERE ride_id IN (SELECT id FROM rides WHERE chair_id = chairs.id)
+					GROUP BY ride_id) is_completed
+					WHERE completed = FALSE) AS avaiable
+		FROM chairs
 		LEFT JOIN latest_chair_locations cl ON cl.chair_id = chairs.id
-		WHERE chairs.is_active = TRUE ORDER BY (ABS(cl.latitude - ?) + ABS(cl.longitude - ?))
-		LIMIT 10`,
+		WHERE chairs.is_active = TRUE
+		
+	) AS av
+		WHERE avaiable = TRUE
+		ORDER BY (ABS(av.latitude - ?) + ABS(av.longitude - ?))
+		LIMIT 1`,
 		latitude, longitude); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, false, nil
+			return nil, true, nil
 		}
 		return nil, false, err
 	}
-	for _, chair := range *chairs {
-		empty := false
-		if err := db.GetContext(ctx, &empty,
-			`SELECT COUNT(*) = 0 FROM
-				(SELECT COUNT(chair_sent_at) = 6 AS completed
-					FROM ride_statuses
-					WHERE ride_id IN (SELECT id FROM rides WHERE chair_id = ?)
-					GROUP BY ride_id) is_completed
-					WHERE completed = FALSE`,
-			chair.ID); err != nil {
-			return nil, false, err
-		}
-		if empty {
-			return &chair, false, nil
-		}
-	}
-	return nil, true, nil
+	return chair, false, nil
 }
 
 // GET /api/internal/matching
