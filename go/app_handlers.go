@@ -251,7 +251,7 @@ func appGetRides(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 
-		fare, err := calculateDiscountedFare(ctx, tx, user.ID, &ride, ride.PickupLatitude, ride.PickupLongitude, ride.DestinationLatitude, ride.DestinationLongitude)
+		fare, err := calculateDiscountedFare(ctx, tx, &ride)
 		if err != nil {
 			writeError(w, http.StatusInternalServerError, err)
 			return
@@ -461,7 +461,7 @@ func appPostRides(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fare, err := calculateDiscountedFare(ctx, tx, user.ID, &ride, req.PickupCoordinate.Latitude, req.PickupCoordinate.Longitude, req.DestinationCoordinate.Latitude, req.DestinationCoordinate.Longitude)
+	fare, err := calculateDiscountedFare(ctx, tx, &ride)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
@@ -631,7 +631,7 @@ func appPostRideEvaluatation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fare, err := calculateDiscountedFare(ctx, tx, ride.UserID, ride, ride.PickupLatitude, ride.PickupLongitude, ride.DestinationLatitude, ride.DestinationLongitude)
+	fare, err := calculateDiscountedFare(ctx, tx, ride)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
@@ -741,7 +741,7 @@ func appGetNotification(w http.ResponseWriter, r *http.Request) {
 		status = yetSentRideStatus.Status
 	}
 
-	fare, err := calculateDiscountedFare(ctx, tx, user.ID, ride, ride.PickupLatitude, ride.PickupLongitude, ride.DestinationLatitude, ride.DestinationLongitude)
+	fare, err := calculateDiscountedFare(ctx, tx, ride)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
@@ -1033,14 +1033,14 @@ func calculateFare(pickupLatitude, pickupLongitude, destLatitude, destLongitude 
 	return initialFare + meteredFare
 }
 
-func calculateDiscountedFare(ctx context.Context, tx *sqlx.Tx, userID string, ride *Ride, pickupLatitude, pickupLongitude, destLatitude, destLongitude int) (int, error) {
+func calculateDiscountedFare(ctx context.Context, tx *sqlx.Tx, ride *Ride) (int, error) {
 	var coupon Coupon
 	discount := 0
 
-	destLatitude = ride.DestinationLatitude
-	destLongitude = ride.DestinationLongitude
-	pickupLatitude = ride.PickupLatitude
-	pickupLongitude = ride.PickupLongitude
+	destLatitude := ride.DestinationLatitude
+	destLongitude := ride.DestinationLongitude
+	pickupLatitude := ride.PickupLatitude
+	pickupLongitude := ride.PickupLongitude
 
 	// すでにクーポンが紐づいているならそれの割引額を参照
 	if err := tx.GetContext(ctx, &coupon, "SELECT * FROM coupons WHERE used_by = ?", ride.ID); err != nil {
