@@ -171,7 +171,7 @@ func chairPostCoordinate(w http.ResponseWriter, r *http.Request) {
 					return
 				}
 				rideStatus := NewLatestRideStatus(ride.ID, "PICKUP")
-				if err := updateLatestRideStatus(ctx, tx, rideStatus); err != nil {
+				if err := updateLatestRideStatus(ctx, tx, rideStatus, ride.ChairID); err != nil {
 					writeError(w, http.StatusInternalServerError, err)
 					return
 				}
@@ -183,7 +183,7 @@ func chairPostCoordinate(w http.ResponseWriter, r *http.Request) {
 					return
 				}
 				rideStatus := NewLatestRideStatus(ride.ID, "ARRIVED")
-				if err := updateLatestRideStatus(ctx, tx, rideStatus); err != nil {
+				if err := updateLatestRideStatus(ctx, tx, rideStatus, ride.ChairID); err != nil {
 					writeError(w, http.StatusInternalServerError, err)
 					return
 				}
@@ -349,7 +349,7 @@ func chairPostRideStatus(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		rideStatus := NewLatestRideStatus(ride.ID, "ENROUTE")
-		if err := updateLatestRideStatus(ctx, tx, rideStatus); err != nil {
+		if err := updateLatestRideStatus(ctx, tx, rideStatus, ride.ChairID); err != nil {
 			writeError(w, http.StatusInternalServerError, err)
 			return
 		}
@@ -369,7 +369,7 @@ func chairPostRideStatus(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		rideStatus := NewLatestRideStatus(ride.ID, "CARRYING")
-		if err := updateLatestRideStatus(ctx, tx, rideStatus); err != nil {
+		if err := updateLatestRideStatus(ctx, tx, rideStatus, ride.ChairID); err != nil {
 			writeError(w, http.StatusInternalServerError, err)
 			return
 		}

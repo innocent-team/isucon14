@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"database/sql"
 
 	"github.com/doug-martin/goqu/v9"
 	"github.com/jmoiron/sqlx"
@@ -47,7 +48,7 @@ func initializeLatestRideStatuses(ctx context.Context, db *sqlx.DB) error {
 	return nil
 }
 
-func updateLatestRideStatus(ctx context.Context, e sqlx.ExtContext, rideStatus *LatestRideStatus) error {
+func updateLatestRideStatus(ctx context.Context, e sqlx.ExtContext, rideStatus *LatestRideStatus, chairId sql.NullString) error {
 	query, args, err := goquDialect.
 		Insert("latest_ride_statuses").
 		Rows(rideStatus).As("new").
@@ -62,6 +63,28 @@ func updateLatestRideStatus(ctx context.Context, e sqlx.ExtContext, rideStatus *
 
 	if _, err := e.ExecContext(ctx, query, args...); err != nil {
 		return err
+	}
+
+	if chairId.Valid {
+		query, args, err := goquDialect.
+			Insert("latest_chair_statuses").
+			Rows(&LatestChairStatus{
+				ChairID:   chairId.String,
+				Status:    rideStatus.Status,
+				CreatedAt: rideStatus.CreatedAt,
+			}).As("new").
+			OnConflict(goqu.DoUpdate("", goqu.Record{
+				"status":     goqu.L("new.status"),
+				"created_at": goqu.L("new.created_at"),
+			})).
+			ToSQL()
+		if err != nil {
+			return err
+		}
+
+		if _, err := e.ExecContext(ctx, query, args...); err != nil {
+			return err
+		}
 	}
 
 	return nil

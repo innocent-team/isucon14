@@ -396,7 +396,7 @@ func appPostRides(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	rideStatus := NewLatestRideStatus(rideID, "MATCHING")
-	if err := updateLatestRideStatus(ctx, tx, rideStatus); err != nil {
+	if err := updateLatestRideStatus(ctx, tx, rideStatus, sql.NullString{}); err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
@@ -618,7 +618,7 @@ func appPostRideEvaluatation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	rideStatus := NewLatestRideStatus(rideID, "COMPLETED")
-	if err := updateLatestRideStatus(ctx, tx, rideStatus); err != nil {
+	if err := updateLatestRideStatus(ctx, tx, rideStatus, ride.ChairID); err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
