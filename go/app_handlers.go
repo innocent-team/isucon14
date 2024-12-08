@@ -980,14 +980,9 @@ func appGetNearbyChairs(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 
-		latestStatus, ok := latestChairStatusById[chair.ID]
-		if !ok {
-			continue
-		}
-
 		// 過去にライドが存在し、かつ、それが完了していない場合はスキップ
-		skip := latestStatus.Status != "COMPLETED"
-		if skip {
+		latestStatus, ok := latestChairStatusById[chair.ID]
+		if ok && latestStatus.Status != "COMPLETED" {
 			continue
 		}
 
