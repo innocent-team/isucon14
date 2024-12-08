@@ -33,8 +33,10 @@ func (q *MatchingPubSubQueue) Start(ctx context.Context) {
 				return
 			}
 			if !missing {
+				log.Printf("queue: mached! message=%#v, length=%d", ride, len(q.queue))
 				break
 			}
+			log.Printf("queue: not mached. message=%#v, length=%d", ride, len(q.queue))
 		}
 		log.Printf("queue: processed message=%#v, length=%d", ride, len(q.queue))
 	}
