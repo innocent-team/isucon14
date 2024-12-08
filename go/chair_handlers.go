@@ -170,7 +170,7 @@ func chairPostCoordinate(w http.ResponseWriter, r *http.Request) {
 					writeError(w, http.StatusInternalServerError, err)
 					return
 				}
-				rideStatus := NewLatestRideStatus(ride.ID, "PICKUP")
+				rideStatus := NewLatestRideStatus(sql.NullString{String: chair.ID, Valid: true}, ride.ID, "PICKUP")
 				if err := updateLatestRideStatus(ctx, tx, rideStatus); err != nil {
 					writeError(w, http.StatusInternalServerError, err)
 					return
@@ -182,7 +182,7 @@ func chairPostCoordinate(w http.ResponseWriter, r *http.Request) {
 					writeError(w, http.StatusInternalServerError, err)
 					return
 				}
-				rideStatus := NewLatestRideStatus(ride.ID, "ARRIVED")
+				rideStatus := NewLatestRideStatus(sql.NullString{String: chair.ID, Valid: true}, ride.ID, "ARRIVED")
 				if err := updateLatestRideStatus(ctx, tx, rideStatus); err != nil {
 					writeError(w, http.StatusInternalServerError, err)
 					return
@@ -348,7 +348,7 @@ func chairPostRideStatus(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusInternalServerError, err)
 			return
 		}
-		rideStatus := NewLatestRideStatus(ride.ID, "ENROUTE")
+		rideStatus := NewLatestRideStatus(sql.NullString{String: chair.ID, Valid: true}, ride.ID, "ENROUTE")
 		if err := updateLatestRideStatus(ctx, tx, rideStatus); err != nil {
 			writeError(w, http.StatusInternalServerError, err)
 			return
@@ -368,7 +368,7 @@ func chairPostRideStatus(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusInternalServerError, err)
 			return
 		}
-		rideStatus := NewLatestRideStatus(ride.ID, "CARRYING")
+		rideStatus := NewLatestRideStatus(sql.NullString{String: chair.ID, Valid: true}, ride.ID, "CARRYING")
 		if err := updateLatestRideStatus(ctx, tx, rideStatus); err != nil {
 			writeError(w, http.StatusInternalServerError, err)
 			return

@@ -103,12 +103,13 @@ func updateLatestRideStatus(ctx context.Context, e sqlx.ExtContext, rideStatus *
 		return err
 	}
 
+	if !rideStatus.ChairID.Valid {
+		return nil
+	}
 	chairStatus := &LatestChairStatus{
 		Status:    rideStatus.Status,
 		CreatedAt: rideStatus.CreatedAt,
-	}
-	if rideStatus.ChairID.Valid {
-		chairStatus.ChairID = rideStatus.ChairID.String
+		ChairID:   rideStatus.ChairID.String,
 	}
 	query, args, err = goquDialect.
 		Insert("latest_chair_statuses").
