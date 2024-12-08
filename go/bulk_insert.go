@@ -28,6 +28,7 @@ func initializeLatestRideStatuses(ctx context.Context, db *sqlx.DB) error {
 		return err
 	}
 
+	// ride_statuses.chair_id を埋める
 	var rides []*Ride
 	if err := goquDialect.DB(db).
 		From("rides").
@@ -37,6 +38,19 @@ func initializeLatestRideStatuses(ctx context.Context, db *sqlx.DB) error {
 	chairIdByRideId := make(map[string]sql.NullString)
 	for _, ride := range rides {
 		chairIdByRideId[ride.ID] = ride.ChairID
+	}
+	for rideID, chairID := range chairIdByRideId {
+		if !chairID.Valid {
+			continue
+		}
+		_, err := goquDialect.DB(db).
+			Update("ride_statuses").
+			Set(goqu.Record{"chair_id": chairID.String}).
+			Where(goqu.Ex{"ride_id": rideID}).
+			Executor().ExecContext(ctx)
+		if err != nil {
+			return err
+		}
 	}
 
 	initialLatestRideStatuses := make([]*LatestRideStatus, 0, len(rideStatusRows))
