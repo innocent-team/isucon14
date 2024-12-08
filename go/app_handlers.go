@@ -321,6 +321,7 @@ func getLatestRideStatus(ctx context.Context, tx executableGet, rideID string) (
 	return status, nil
 }
 
+// POST /api/app/rides
 func appPostRides(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	req := &appPostRidesRequest{}
@@ -349,14 +350,23 @@ func appPostRides(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	rideIDs := make([]string, 0, len(rides))
+	for _, ride := range rides {
+		rideIDs = append(rideIDs, ride.ID)
+	}
+	rideStatusByID, err := getLatestRideStatusesByRideIds(ctx, tx, rideIDs)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
 	continuingRideCount := 0
 	for _, ride := range rides {
-		status, err := getLatestRideStatus(ctx, tx, ride.ID)
-		if err != nil {
-			writeError(w, http.StatusInternalServerError, err)
+		status, ok := rideStatusByID[ride.ID]
+		if !ok {
+			writeError(w, http.StatusInternalServerError, errors.New("ride status not found"))
 			return
 		}
-		if status != "COMPLETED" {
+		if status.Status != "COMPLETED" {
 			continuingRideCount++
 		}
 	}
