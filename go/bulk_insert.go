@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"database/sql"
+	"slices"
 
 	"github.com/doug-martin/goqu/v9"
 	"github.com/jmoiron/sqlx"
@@ -54,7 +55,11 @@ func initializeLatestRideStatuses(ctx context.Context, db *sqlx.DB) error {
 		chairIDByRideId[ride.ID] = ride.ChairID
 	}
 	// latest_chair_statuses の初期値を構築
-	initialLatestChairStatuses := make([]*LatestChairStatus, 0, len(rideStatusRows))
+	initialLatestChairStatusByChairId := make(map[string]*LatestChairStatus)
+	slices.SortFunc(initialLatestRideStatuses, func(a, b *LatestRideStatus) int {
+		// created_at DESC
+		return b.CreatedAt.Compare(a.CreatedAt)
+	})
 	for _, rideStatus := range initialLatestRideStatuses {
 		chairId, ok := chairIDByRideId[rideStatus.RideID]
 		if !ok {
@@ -63,17 +68,28 @@ func initializeLatestRideStatuses(ctx context.Context, db *sqlx.DB) error {
 		if !chairId.Valid {
 			continue
 		}
-		initialLatestChairStatuses = append(initialLatestChairStatuses, &LatestChairStatus{
+		if _, ok := initialLatestChairStatusByChairId[chairId.String]; ok {
+			continue
+		}
+		initialLatestChairStatusByChairId[chairId.String] = &LatestChairStatus{
 			ChairID:   chairId.String,
 			Status:    rideStatus.Status,
 			CreatedAt: rideStatus.CreatedAt,
-		})
+		}
 	}
 
-	if len(initialLatestChairStatuses) > 0 {
+	if len(initialLatestChairStatusByChairId) > 0 {
+		initialLatestChairStatuses := make([]*LatestChairStatus, 0, len(initialLatestChairStatusByChairId))
+		for _, chairStatus := range initialLatestChairStatusByChairId {
+			initialLatestChairStatuses = append(initialLatestChairStatuses, chairStatus)
+		}
 		_, err := goquDialect.DB(db).
-			Insert("latest_chair_statuses").
+			Insert("latest_chair_statuses").As("new").
 			Rows(initialLatestChairStatuses).
+			OnConflict(goqu.DoUpdate("", goqu.Record{
+				"status":     goqu.L("new.status"),
+				"created_at": goqu.L("new.created_at"),
+			})).
 			Executor().ExecContext(ctx)
 		if err != nil {
 			return err
