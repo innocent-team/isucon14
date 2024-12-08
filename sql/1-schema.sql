@@ -51,17 +51,6 @@ CREATE TABLE chair_locations
 )
   COMMENT = '椅子の現在位置情報テーブル';
 
-DROP TABLE IF EXISTS latest_chair_locations;
-CREATE TABLE latest_chair_locations
-(
-  chair_id   VARCHAR(26) NOT NULL COMMENT '椅子ID',
-  latitude   INTEGER     NOT NULL COMMENT '経度',
-  longitude  INTEGER     NOT NULL COMMENT '緯度',
-  created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '登録日時',
-  PRIMARY KEY (chair_id)
-)
-  COMMENT = '椅子の最新位置情報テーブル';
-
 DROP TABLE IF EXISTS users;
 CREATE TABLE users
 (
