@@ -229,28 +229,20 @@ type ownerGetChairResponseChair struct {
 	TotalDistanceUpdatedAt *int64 `json:"total_distance_updated_at,omitempty"`
 }
 
-var ownerGetChairsCache = cache.NewReadHeavyCacheExpired[string, ownerGetChairResponse]()
+type ownerGetChairTotalDistance struct {
+	ChairID                string       `json:"chair_id"`
+	TotalDistance          int          `json:"total_distance"`
+	TotalDistanceUpdatedAt sql.NullTime `json:"total_distance_updated_at,omitempty"`
+}
+
+var ownerGetChairsTotalDistanceCache = cache.NewReadHeavyCacheExpired[string, map[string]ownerGetChairTotalDistance]()
+
+var ownerGetChairsTotalDistanceCacheMu sync.Mutex
 
 // GET /api/owner/chairs
 func ownerGetChairs(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	owner := ctx.Value("owner").(*Owner)
-
-	ownerGetChairsCacheMutex.RLock()
-	cachedResp, found := ownerGetChairsCache.Get(owner.ID)
-	ownerGetChairsCacheMutex.RUnlock()
-	if found {
-		writeJSON(w, http.StatusOK, cachedResp)
-		return
-	}
-
-	ownerGetChairsCacheMutex.Lock()
-	cachedResp, found = ownerGetChairsCache.Get(owner.ID)
-	if found {
-		ownerGetChairsCacheMutex.Unlock()
-		writeJSON(w, http.StatusOK, cachedResp)
-		return
-	}
 
 	chairs := []chairWithDetail{}
 	if err := db.SelectContext(ctx, &chairs, `SELECT id,
@@ -280,18 +272,50 @@ WHERE owner_id = ?
 		return
 	}
 
+	totalDistanceRowByChairID := map[string]ownerGetChairTotalDistance{}
+	ownerGetChairsTotalDistanceCacheMu.Lock()
+	defer ownerGetChairsTotalDistanceCacheMu.Unlock()
+	if cached, ok := ownerGetChairsTotalDistanceCache.Get(owner.ID); ok {
+		totalDistanceRowByChairID = cached
+	} else {
+
+		var totalDistanceRows []ownerGetChairTotalDistance
+		query := `
+SELECT chair_id, IFNULL(total_distance, 0) AS total_distance, total_distance_updated_at
+FROM chairs
+LEFT JOIN (SELECT chair_id,
+		SUM(IFNULL(distance, 0)) AS total_distance,
+		MAX(created_at)          AS total_distance_updated_at
+FROM (SELECT chair_id,
+			created_at,
+			ABS(latitude - LAG(latitude) OVER (PARTITION BY chair_id ORDER BY created_at)) +
+			ABS(longitude - LAG(longitude) OVER (PARTITION BY chair_id ORDER BY created_at)) AS distance
+		FROM chair_locations) tmp
+GROUP BY chair_id) distance_table ON distance_table.chair_id = chairs.id
+WHERE owner_id = ?
+`
+		if err := db.SelectContext(ctx, &totalDistanceRows, query, owner.ID); err != nil {
+			writeError(w, http.StatusInternalServerError, err)
+			return
+		}
+		for _, row := range totalDistanceRows {
+			totalDistanceRowByChairID[row.ChairID] = row
+		}
+	}
+
 	res := ownerGetChairResponse{}
 	for _, chair := range chairs {
+		totalDistance := totalDistanceRowByChairID[chair.ID]
 		c := ownerGetChairResponseChair{
 			ID:            chair.ID,
 			Name:          chair.Name,
 			Model:         chair.Model,
 			Active:        chair.IsActive,
 			RegisteredAt:  chair.CreatedAt.UnixMilli(),
-			TotalDistance: chair.TotalDistance,
+			TotalDistance: totalDistance.TotalDistance,
 		}
-		if chair.TotalDistanceUpdatedAt.Valid {
-			t := chair.TotalDistanceUpdatedAt.Time.UnixMilli()
+		if totalDistance.TotalDistanceUpdatedAt.Valid {
+			t := totalDistance.TotalDistanceUpdatedAt.Time.UnixMilli()
 			c.TotalDistanceUpdatedAt = &t
 		}
 		res.Chairs = append(res.Chairs, c)
@@ -299,7 +323,6 @@ WHERE owner_id = ?
 
 	// 3秒キャッシュする
 	// ref: https://gist.github.com/wtks/0a3268de13856ed6e18c6560023ec436#%E7%8C%B6%E4%BA%88%E6%99%82%E9%96%93
-	ownerGetChairsCache.Set(owner.ID, res, 3*time.Second)
+	ownerGetChairsTotalDistanceCache.Set(owner.ID, totalDistanceRowByChairID, 3*time.Second)
 	writeJSON(w, http.StatusOK, res)
-	ownerGetChairsCacheMutex.Unlock()
 }
