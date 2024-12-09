@@ -20,15 +20,16 @@ type ChairType struct {
 	ID        string        `db:"id"`
 	Latitude  sql.Null[int] `db:"latitude"`
 	Longitude sql.Null[int] `db:"longitude"`
+	Speed     int           `db:"speed"`
 }
 
 func searchNearestbyAvaiableChair(ctx context.Context, db *sqlx.DB, latitude int, longitude int) (*ChairType, bool, error) {
 	// PickupLatitude, PickupLongitude を使って、使える近くの椅子を探す
 	chairCandidates := []*ChairType{}
 	query := `
-		SELECT id, latitude, longitude
+		SELECT id, latitude, longitude, speed
 		FROM ( 
-		SELECT id, latitude, longitude,
+		SELECT id, latitude, longitude, cm.speed,
 			(SELECT COUNT(*) = 0 FROM
 					(SELECT COUNT(chair_sent_at) = 6 AS completed
 						FROM ride_statuses
@@ -37,6 +38,7 @@ func searchNearestbyAvaiableChair(ctx context.Context, db *sqlx.DB, latitude int
 						WHERE completed = FALSE) AS avaiable
 			FROM chairs
 			LEFT JOIN latest_chair_locations cl ON cl.chair_id = chairs.id
+			INNER JOIN chair_models cm ON cm.name = chairs.model
 			WHERE chairs.is_active = TRUE
 			
 		) AS av
@@ -48,14 +50,21 @@ func searchNearestbyAvaiableChair(ctx context.Context, db *sqlx.DB, latitude int
 		return nil, true, nil
 	}
 
-	// 一番近い椅子を探す
+	// 一番スコアが高い椅子を探す
 	slices.SortFunc(chairCandidates, func(a, b *ChairType) int {
-		aDistance := calculateDistance(a.Latitude.V, a.Longitude.V, latitude, longitude)
-		bDistance := calculateDistance(b.Latitude.V, b.Longitude.V, latitude, longitude)
-		return aDistance - bDistance
+		aScore := calculateMatchingScore(a, latitude, longitude)
+		bScore := calculateMatchingScore(b, latitude, longitude)
+		return bScore - aScore
 	})
 
 	return chairCandidates[0], false, nil
+}
+
+func calculateMatchingScore(chair *ChairType, pickupLatitute, pickupLongitude int) int {
+	distance := calculateDistance(chair.Latitude.V, chair.Longitude.V, pickupLatitute, pickupLongitude)
+	// スピードが速いほどスコアが高い
+	// ただし、距離が長い場合はスコアが下がる
+	return chair.Speed*10 - distance
 }
 
 func matcher(ctx context.Context, db *sqlx.DB, ride *RideType) (bool, error) {
