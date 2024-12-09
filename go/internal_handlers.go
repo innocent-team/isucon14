@@ -26,14 +26,21 @@ func searchNearestbyAvaiableChair(ctx context.Context, db *sqlx.DB, latitude int
 	// PickupLatitude, PickupLongitude を使って、使える近くの椅子を探す
 	chairCandidates := []*ChairType{}
 	query := `
-SELECT id, latitude, longitude
-FROM chairs
-LEFT JOIN latest_chair_locations cl ON cl.chair_id = chairs.id
-INNER JOIN latest_chair_statuses ON latest_chair_statuses.chair_id = chairs.id
-WHERE latest_chair_statuses.status = 'COMPLETED'
-AND latitude IS NOT NULL
-AND longitude IS NOT NULL
-`
+		SELECT id, latitude, longitude
+		FROM ( 
+		SELECT id, latitude, longitude,
+			(SELECT COUNT(*) = 0 FROM
+					(SELECT COUNT(chair_sent_at) = 6 AS completed
+						FROM ride_statuses
+						WHERE ride_id IN (SELECT id FROM rides WHERE chair_id = chairs.id)
+						GROUP BY ride_id) is_completed
+						WHERE completed = FALSE) AS avaiable
+			FROM chairs
+			LEFT JOIN latest_chair_locations cl ON cl.chair_id = chairs.id
+			WHERE chairs.is_active = TRUE
+			
+		) AS av
+			WHERE avaiable = TRUE AND latitude IS NOT NULL AND longitude IS NOT NULL`
 	if err := db.SelectContext(ctx, &chairCandidates, query); err != nil {
 		return nil, false, err
 	}
