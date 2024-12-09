@@ -310,8 +310,8 @@ WHERE owner_id = ?
 		res.Chairs = append(res.Chairs, c)
 	}
 
-	// 3秒キャッシュする
+	// 2.9秒キャッシュする
 	// ref: https://gist.github.com/wtks/0a3268de13856ed6e18c6560023ec436#%E7%8C%B6%E4%BA%88%E6%99%82%E9%96%93
-	ownerGetChairsTotalDistanceCache.Set(owner.ID, totalDistanceRowByChairID, 3*time.Second)
+	ownerGetChairsTotalDistanceCache.Set(owner.ID, totalDistanceRowByChairID, 2900*time.Millisecond)
 	writeJSON(w, http.StatusOK, res)
 }
