@@ -26,7 +26,7 @@ func searchNearestbyAvaiableChair(ctx context.Context, db *sqlx.DB, latitude int
 	// PickupLatitude, PickupLongitude を使って、使える近くの椅子を探す
 	chairCandidates := []*ChairType{}
 	query := `
-		SELECT id
+		SELECT id, latitude, longitude,
 		FROM ( 
 		SELECT id, latitude, longitude,
 			(SELECT COUNT(*) = 0 FROM
