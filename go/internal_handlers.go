@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"net/http"
+	"slices"
 
 	"github.com/jmoiron/sqlx"
 )
@@ -16,38 +17,45 @@ type RideType struct {
 }
 
 type ChairType struct {
-	ID string `db:"id"`
+	ID        string        `db:"id"`
+	Latitude  sql.Null[int] `db:"latitude"`
+	Longitude sql.Null[int] `db:"longitude"`
 }
 
 func searchNearestbyAvaiableChair(ctx context.Context, db *sqlx.DB, latitude int, longitude int) (*ChairType, bool, error) {
 	// PickupLatitude, PickupLongitude を使って、使える近くの椅子を探す
-	chair := &ChairType{}
-	if err := db.GetContext(ctx, chair, `
-	SELECT id
-	FROM ( 
-	
-	SELECT id, latitude, longitude,
-		(SELECT COUNT(*) = 0 FROM
-				(SELECT COUNT(chair_sent_at) = 6 AS completed
-					FROM ride_statuses
-					WHERE ride_id IN (SELECT id FROM rides WHERE chair_id = chairs.id)
-					GROUP BY ride_id) is_completed
-					WHERE completed = FALSE) AS avaiable
-		FROM chairs
-		LEFT JOIN latest_chair_locations cl ON cl.chair_id = chairs.id
-		WHERE chairs.is_active = TRUE
-		
-	) AS av
-		WHERE avaiable = TRUE
-		ORDER BY (ABS(av.latitude - ?) + ABS(av.longitude - ?))
-		LIMIT 1`,
-		latitude, longitude); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, true, nil
-		}
+	chairCandidates := []*ChairType{}
+	query := `
+		SELECT id, latitude, longitude
+		FROM ( 
+		SELECT id, latitude, longitude,
+			(SELECT COUNT(*) = 0 FROM
+					(SELECT COUNT(chair_sent_at) = 6 AS completed
+						FROM ride_statuses
+						WHERE ride_id IN (SELECT id FROM rides WHERE chair_id = chairs.id)
+						GROUP BY ride_id) is_completed
+						WHERE completed = FALSE) AS avaiable
+			FROM chairs
+			LEFT JOIN latest_chair_locations cl ON cl.chair_id = chairs.id
+			WHERE chairs.is_active = TRUE
+			
+		) AS av
+			WHERE avaiable = TRUE AND latitude IS NOT NULL AND longitude IS NOT NULL`
+	if err := db.SelectContext(ctx, &chairCandidates, query); err != nil {
 		return nil, false, err
 	}
-	return chair, false, nil
+	if len(chairCandidates) == 0 {
+		return nil, true, nil
+	}
+
+	// 一番近い椅子を探す
+	slices.SortFunc(chairCandidates, func(a, b *ChairType) int {
+		aDistance := calculateDistance(a.Latitude.V, a.Longitude.V, latitude, longitude)
+		bDistance := calculateDistance(b.Latitude.V, b.Longitude.V, latitude, longitude)
+		return aDistance - bDistance
+	})
+
+	return chairCandidates[0], false, nil
 }
 
 func matcher(ctx context.Context, db *sqlx.DB, ride *RideType) (bool, error) {
