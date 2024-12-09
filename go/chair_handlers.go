@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
 
 	"github.com/jmoiron/sqlx"
@@ -319,15 +320,8 @@ func chairPostRideStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tx, err := db.Beginx()
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, err)
-		return
-	}
-	defer tx.Rollback()
-
 	ride := &Ride{}
-	if err := tx.GetContext(ctx, ride, "SELECT * FROM rides WHERE id = ? FOR UPDATE", rideID); err != nil {
+	if err := db.GetContext(ctx, &ride, "SELECT * FROM rides WHERE id = ?", rideID); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			writeError(w, http.StatusNotFound, errors.New("ride not found"))
 			return
@@ -340,22 +334,13 @@ func chairPostRideStatus(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, errors.New("not assigned to this ride"))
 		return
 	}
-
 	switch req.Status {
 	// Acknowledge the ride
 	case "ENROUTE":
-		if _, err := tx.ExecContext(ctx, "INSERT INTO ride_statuses (id, ride_id, status) VALUES (?, ?, ?)", ulid.Make().String(), ride.ID, "ENROUTE"); err != nil {
-			writeError(w, http.StatusInternalServerError, err)
-			return
-		}
-		rideStatus := NewLatestRideStatus(ride.ID, "ENROUTE")
-		if err := updateLatestRideStatus(ctx, tx, rideStatus, ride.ChairID); err != nil {
-			writeError(w, http.StatusInternalServerError, err)
-			return
-		}
+		// NOP
 	// After Picking up user
 	case "CARRYING":
-		status, err := getLatestRideStatus(ctx, tx, ride.ID)
+		status, err := getLatestRideStatus(ctx, db, ride.ID)
 		if err != nil {
 			writeError(w, http.StatusInternalServerError, err)
 			return
@@ -364,23 +349,63 @@ func chairPostRideStatus(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusBadRequest, errors.New("chair has not arrived yet"))
 			return
 		}
-		if _, err := tx.ExecContext(ctx, "INSERT INTO ride_statuses (id, ride_id, status) VALUES (?, ?, ?)", ulid.Make().String(), ride.ID, "CARRYING"); err != nil {
-			writeError(w, http.StatusInternalServerError, err)
-			return
-		}
-		rideStatus := NewLatestRideStatus(ride.ID, "CARRYING")
-		if err := updateLatestRideStatus(ctx, tx, rideStatus, ride.ChairID); err != nil {
-			writeError(w, http.StatusInternalServerError, err)
-			return
-		}
 	default:
 		writeError(w, http.StatusBadRequest, errors.New("invalid status"))
 	}
 
-	if err := tx.Commit(); err != nil {
-		writeError(w, http.StatusInternalServerError, err)
-		return
-	}
+	go func() {
+		ctx = context.WithoutCancel(ctx)
+		tx, err := db.Beginx()
+		if err != nil {
+			slog.ErrorContext(ctx, "failed to begin transaction", slog.Any("error", err))
+			return
+		}
+		defer tx.Rollback()
+
+		ride := &Ride{}
+		if err := tx.GetContext(ctx, ride, "SELECT * FROM rides WHERE id = ? FOR UPDATE", rideID); err != nil {
+			slog.ErrorContext(ctx, "failed to get ride", slog.Any("error", err))
+			return
+		}
+
+		switch req.Status {
+		// Acknowledge the ride
+		case "ENROUTE":
+			if _, err := tx.ExecContext(ctx, "INSERT INTO ride_statuses (id, ride_id, status) VALUES (?, ?, ?)", ulid.Make().String(), ride.ID, "ENROUTE"); err != nil {
+				slog.ErrorContext(ctx, "failed to insert ride status", slog.Any("error", err))
+				return
+			}
+			rideStatus := NewLatestRideStatus(ride.ID, "ENROUTE")
+			if err := updateLatestRideStatus(ctx, tx, rideStatus, ride.ChairID); err != nil {
+				slog.ErrorContext(ctx, "failed to update latest ride status", slog.Any("error", err))
+				return
+			}
+		// After Picking up user
+		case "CARRYING":
+			status, err := getLatestRideStatus(ctx, tx, ride.ID)
+			if err != nil {
+				slog.ErrorContext(ctx, "failed to get latest ride status", slog.Any("error", err))
+				return
+			}
+			if status != "PICKUP" {
+				slog.ErrorContext(ctx, "chair has not arrived yet")
+				return
+			}
+			if _, err := tx.ExecContext(ctx, "INSERT INTO ride_statuses (id, ride_id, status) VALUES (?, ?, ?)", ulid.Make().String(), ride.ID, "CARRYING"); err != nil {
+				slog.ErrorContext(ctx, "failed to insert ride status", slog.Any("error", err))
+				return
+			}
+			rideStatus := NewLatestRideStatus(ride.ID, "CARRYING")
+			if err := updateLatestRideStatus(ctx, tx, rideStatus, ride.ChairID); err != nil {
+				slog.ErrorContext(ctx, "failed to update latest ride status", slog.Any("error", err))
+				return
+			}
+		}
+
+		if err := tx.Commit(); err != nil {
+			return
+		}
+	}()
 
 	w.WriteHeader(http.StatusNoContent)
 }
