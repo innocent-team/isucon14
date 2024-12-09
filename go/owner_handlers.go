@@ -281,7 +281,7 @@ WHERE owner_id = ?
 
 		var totalDistanceRows []ownerGetChairTotalDistance
 		query := `
-SELECT chair_id, IFNULL(total_distance, 0) AS total_distance, total_distance_updated_at
+SELECT chairs.id, IFNULL(total_distance, 0) AS total_distance, total_distance_updated_at
 FROM chairs
 LEFT JOIN (SELECT chair_id,
 		SUM(IFNULL(distance, 0)) AS total_distance,
