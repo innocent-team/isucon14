@@ -51,8 +51,16 @@ func searchNearestbyAvaiableChair(ctx context.Context, db *sqlx.DB, latitude int
 		return nil, true, nil
 	}
 
+	// マンハッタン距離が閾値以内の椅子を探す
+	filteredCandidates := make([]*ChairType, 0, len(chairCandidates))
+	for _, chair := range chairCandidates {
+		if calculateDistance(chair.Latitude.V, chair.Longitude.V, latitude, longitude) <= 100 {
+			filteredCandidates = append(filteredCandidates, chair)
+		}
+	}
+
 	// 一番スコアが高い椅子を探す
-	slices.SortFunc(chairCandidates, func(a, b *ChairType) int {
+	slices.SortFunc(filteredCandidates, func(a, b *ChairType) int {
 		aScore := calculateMatchingScore(a, latitude, longitude)
 		bScore := calculateMatchingScore(b, latitude, longitude)
 		return cmp.Compare(bScore, aScore)
