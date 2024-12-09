@@ -41,7 +41,7 @@ func searchNearestbyAvaiableChair(ctx context.Context, db *sqlx.DB, latitude int
 			
 		) AS av
 			WHERE avaiable = TRUE AND latitude IS NOT NULL AND longitude IS NOT NULL`
-	if err := db.SelectContext(ctx, &chairCandidates, query, latitude, longitude); err != nil {
+	if err := db.SelectContext(ctx, &chairCandidates, query); err != nil {
 		return nil, false, err
 	}
 	if len(chairCandidates) == 0 {
