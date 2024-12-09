@@ -230,9 +230,9 @@ type ownerGetChairResponseChair struct {
 }
 
 type ownerGetChairTotalDistance struct {
-	ChairID                string       `json:"chair_id"`
-	TotalDistance          int          `json:"total_distance"`
-	TotalDistanceUpdatedAt sql.NullTime `json:"total_distance_updated_at,omitempty"`
+	ChairID                string       `db:"chair_id"`
+	TotalDistance          int          `db:"total_distance"`
+	TotalDistanceUpdatedAt sql.NullTime `db:"total_distance_updated_at"`
 }
 
 var ownerGetChairsTotalDistanceCache = cache.NewReadHeavyCacheExpired[string, map[string]ownerGetChairTotalDistance]()
