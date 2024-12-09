@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"net/http"
@@ -9,6 +10,7 @@ import (
 	"time"
 
 	"github.com/catatsuy/cache"
+	"github.com/jmoiron/sqlx"
 	"github.com/oklog/ulid/v2"
 )
 
@@ -123,13 +125,19 @@ func ownerGetSales(w http.ResponseWriter, r *http.Request) {
 		TotalSales: 0,
 	}
 
+	chairIds := make([]string, len(chairs))
+	for i, chair := range chairs {
+		chairIds[i] = chair.ID
+	}
+	ridesByChairId, err := getRidesByChairIds(ctx, tx, chairIds, since, until)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+
 	modelSalesByModel := map[string]int{}
 	for _, chair := range chairs {
-		rides := []Ride{}
-		if err := tx.SelectContext(ctx, &rides, "SELECT rides.* FROM rides JOIN ride_statuses ON rides.id = ride_statuses.ride_id WHERE chair_id = ? AND status = 'COMPLETED' AND updated_at BETWEEN ? AND ? + INTERVAL 999 MICROSECOND", chair.ID, since, until); err != nil {
-			writeError(w, http.StatusInternalServerError, err)
-			return
-		}
+		rides := ridesByChairId[chair.ID]
 
 		sales := sumSales(rides)
 		res.TotalSales += sales
@@ -153,6 +161,33 @@ func ownerGetSales(w http.ResponseWriter, r *http.Request) {
 	res.Models = models
 
 	writeJSON(w, http.StatusOK, res)
+}
+
+// SELECT rides.* FROM rides JOIN ride_statuses ON rides.id = ride_statuses.ride_id WHERE chair_id = ? AND status = 'COMPLETED' AND updated_at BETWEEN ? AND ? + INTERVAL 999 MICROSECOND
+func getRidesByChairIds(ctx context.Context, q sqlx.QueryerContext, chairIds []string, since time.Time, until time.Time) (map[string][]Ride, error) {
+	if len(chairIds) == 0 {
+		return nil, nil
+	}
+
+	query, args, err := sqlx.In(`
+SELECT rides.*
+FROM rides
+JOIN ride_statuses ON rides.id = ride_statuses.ride_id
+WHERE chair_id IN (?) AND status = 'COMPLETED' AND updated_at BETWEEN ? AND ? + INTERVAL 999 MICROSECOND
+`, chairIds, since, until)
+	if err != nil {
+		return nil, err
+	}
+	var rides []Ride
+	if err := sqlx.SelectContext(ctx, q, &rides, query, args...); err != nil {
+		return nil, err
+	}
+
+	ridesByChairId := map[string][]Ride{}
+	for _, ride := range rides {
+		ridesByChairId[ride.ChairID.String] = append(ridesByChairId[ride.ChairID.String], ride)
+	}
+	return ridesByChairId, nil
 }
 
 func sumSales(rides []Ride) int {
