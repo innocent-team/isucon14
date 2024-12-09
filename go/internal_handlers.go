@@ -61,11 +61,10 @@ func searchNearestbyAvaiableChair(ctx context.Context, db *sqlx.DB, latitude int
 	return chairCandidates[0], false, nil
 }
 
-func calculateMatchingScore(chair *ChairType, pickupLatitute, pickupLongitude int) int {
+func calculateMatchingScore(chair *ChairType, pickupLatitute, pickupLongitude int) float64 {
 	distance := calculateDistance(chair.Latitude.V, chair.Longitude.V, pickupLatitute, pickupLongitude)
-	// スピードが速いほどスコアが高い
-	// ただし、距離が長い場合はスコアが下がる
-	return chair.Speed*10 - distance
+	// 速度で割ることで、速い椅子を優先する
+	return -float64(distance)/float64(chair.Speed)
 }
 
 func matcher(ctx context.Context, db *sqlx.DB, ride *RideType) (bool, error) {
