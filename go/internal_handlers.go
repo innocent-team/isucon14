@@ -54,7 +54,7 @@ func searchNearestbyAvaiableChair(ctx context.Context, db *sqlx.DB, latitude int
 	// マンハッタン距離が閾値以内の椅子を探す
 	filteredCandidates := make([]*ChairType, 0, len(chairCandidates))
 	for _, chair := range chairCandidates {
-		if calculateDistance(chair.Latitude.V, chair.Longitude.V, latitude, longitude) <= 50 {
+		if calculateDistance(chair.Latitude.V, chair.Longitude.V, latitude, longitude) <= 100 {
 			filteredCandidates = append(filteredCandidates, chair)
 		}
 	}
