@@ -1,6 +1,7 @@
 package main
 
 import (
+	"cmp"
 	"context"
 	"database/sql"
 	"errors"
@@ -54,7 +55,7 @@ func searchNearestbyAvaiableChair(ctx context.Context, db *sqlx.DB, latitude int
 	slices.SortFunc(chairCandidates, func(a, b *ChairType) int {
 		aScore := calculateMatchingScore(a, latitude, longitude)
 		bScore := calculateMatchingScore(b, latitude, longitude)
-		return bScore - aScore
+		return cmp.Compare(bScore, aScore)
 	})
 
 	return chairCandidates[0], false, nil
